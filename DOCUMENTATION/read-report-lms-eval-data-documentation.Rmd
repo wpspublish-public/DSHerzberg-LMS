@@ -1,0 +1,177 @@
+---
+title: <font size="6">Read and report course evaluation data from LMS</font>
+output: html_document
+---
+
+```{r setup, include = FALSE}
+knitr::opts_chunk$set(echo = TRUE, warning = FALSE, message = FALSE)
+```
+
+#### Overview
+
+This is a method for reading in output from WPS LMS system, cleaning up and reformatting the data, and producing a report of frequency counts for the course evaluations.
+
+One of the key elements of processing is to handle columns that include super-ordinate questions, sub-ordinate questions, and responses. Here is an example of one such column:
+
+```
+  `Usefulness of Content`                                                                              
+1 How useful was the content of this CE program for your practice or other professional development?: 3
+2 How useful was the content of this CE program for your practice or other professional development?: 5
+3 How useful was the content of this CE program for your practice or other professional development?: 4
+4 How useful was the content of this CE program for your practice or other professional development?: 5
+5 How useful was the content of this CE program for your practice or other professional development?: 5
+6 How useful was the content of this CE program for your practice or other professional development?: 3
+```
+The column name, `Usefulness of Content` is a super-ordinate question. The row values going down the column contain both the sub-ordinate question `How useful was the content of this CE program for your practice or other professional development?`, and the numerical responses to that sub-ordinate question. This represents a classic "untidy" data input, and this code cleans it up by created separate columns for each super- and sub-ordinate question pair, with the rows containing numerical responses by person.
+
+###### RUNNABLE CODE
+```{r script, eval = FALSE}
+suppressMessages(library(here))
+suppressMessages(suppressWarnings(library(tidyverse)))
+suppressMessages(library(xlsx))
+
+input <-
+  suppressMessages(read_csv(here(
+    "INPUT-FILES/summary-evaluation-data.csv"
+  )))
+
+names_input <- names(input)
+token_super_sub_first_col <- "General Live Webinar Experience"
+token_super_sub_last_col <- "Usefulness of Content"
+token_lhs_intact_cols <- c("First Name", "Last Name", "Email", "Credits")
+token_rhs_intact_first_col <- str_c("How will you use the knowledge ", 
+                                    "gained from this course within your practice?")
+token_rhs_intact_last_col <- str_c("I certify that I am the person who ", 
+                                   "attended the live webinar and completed this evaluation.")
+token_split_destination_cols <- c("q1", "r1", "q2", "r2", "q3", "r3", "q4", "r4", "q5", "r5")
+token_split_regex <- ":|(?<=[[:digit:]]),"
+
+df_super_sub_cols <- input %>% 
+  select(all_of(token_super_sub_first_col):all_of(token_super_sub_last_col))
+
+date_col <- input %>% 
+  select(Completed) %>% 
+  transmute(Completed = lubridate::mdy_hm(Completed))
+
+lhs_cols <- input %>% 
+  select(all_of(token_lhs_intact_cols)) %>% 
+  mutate(across(where(is.logical), as.character))
+
+rhs_cols <- input %>% 
+  select(all_of(token_rhs_intact_first_col):all_of(token_rhs_intact_last_col))
+
+q_name <- str_c(str_replace_all(names(df_super_sub_cols), " ", "_"), ":")
+
+list_super_sub_cols <- map(
+  names(df_super_sub_cols),
+  ~ df_super_sub_cols %>%
+    select(!!sym(.x)) %>%
+    separate(
+      !!sym(.x),
+      all_of(token_split_destination_cols),
+      token_split_regex,
+      remove = TRUE
+    ) %>% 
+    janitor::remove_empty("cols")
+)
+
+list_r_cols <- map(list_super_sub_cols,
+                   ~ .x %>%
+                     select(contains("r")) %>%
+                     mutate(across(
+                       everything(),
+                       ~ str_replace(., " ", "") %>%
+                         as.integer()
+                     )))
+
+list_sub_q_names <- map(
+  list_super_sub_cols,
+  ~ .x %>%
+    select(contains("q")) %>%
+    filter(row_number() == 1) %>%
+    as.character() %>%
+    str_replace_all(" ", "_")
+)
+
+list_col_names <- map2(list_sub_q_names,
+                       q_name,
+                       ~
+                         str_c(.y, .x, sep = "_") %>%
+                         str_replace(., "__", "_"))
+
+named_super_sub_r_cols <- map2(list_r_cols,  list_col_names,
+                                    ~ .x %>%
+                                      set_names(.y)) %>% 
+  bind_cols()
+
+output <- bind_cols(
+  lhs_cols,
+  date_col,
+  named_super_sub_r_cols,
+  rhs_cols
+)
+
+write_csv(output,
+          here("OUTPUT-FILES/lms-output.csv"),
+          na = "")
+
+school_psych <- output %>% 
+  filter(`What is your field of work?` == "School Psychology") %>% 
+  select(all_of(names(named_super_sub_r_cols))) %>% 
+  pivot_longer(everything(), names_to = 'item', values_to = 'value') %>% 
+  count(item, value) %>% 
+  group_by(item) %>% 
+  complete(value = 1:5) %>% 
+  arrange(desc(value), .by_group = TRUE) %>% 
+  replace_na(list(n = 0)) %>% 
+  mutate(total = sum(n),
+         total_pct = round(100*(n/total), 1),
+         valid_pct = round(100*(n/total), 1),
+         csum = cumsum(n),
+         valid_cum_pct = round(100*(csum/total), 1),
+  ) %>% 
+  separate(
+    item,
+    c("super_q", "sub_q"),
+    ":_",
+    remove = TRUE
+  ) %>% mutate(
+    super_q = case_when(
+      lag(super_q) == super_q  ~ NA_character_,
+      TRUE ~ super_q
+    ),
+    sub_q = case_when(
+      lag(sub_q) == sub_q  ~ NA_character_,
+      TRUE ~ sub_q
+    ),
+    label = case_when(
+      value == 5 ~ "excellent",
+      value == 4 ~ "above average",
+      value == 3 ~ "average",
+      value == 2 ~ "below average",
+      value == 1 ~ "poor",
+      TRUE ~ NA_character_
+    ),
+    across(c(total_pct, valid_pct, valid_cum_pct), ~ format(., digits = 1, nsmall = 1))
+    ) %>%
+  select(super_q, sub_q, value, label, n, total_pct, valid_pct, valid_cum_pct) %>% 
+  rename(freq = n) %>% 
+  as.data.frame() %>%
+  mutate(across(everything(), ~ replace_na(., ""))) %>% 
+  write.xlsx(
+    here("OUTPUT-FILES/school-psych-report.xlsx"),
+    sheetName = "school_psych",
+    row.names = FALSE,
+    append = FALSE
+  )
+```
+
+<br>
+
+###### COMMENTED SNIPPETS
+Load libraries and read input data.
+```{r script, echo = 1:8, eval = FALSE}
+```
+Initialize tokens representing job-specific elements.
+```{r script, echo = 10:19, eval = FALSE}
+```

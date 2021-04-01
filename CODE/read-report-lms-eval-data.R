@@ -1,5 +1,6 @@
 suppressMessages(library(here))
 suppressMessages(suppressWarnings(library(tidyverse)))
+suppressMessages(library(xlsx))
 
 # read input data
 input <-
@@ -25,7 +26,7 @@ token_rhs_intact_last_col <- str_c("I certify that I am the person who ",
 # MOST sub-questions. The script handles super qs with fewer sub qs automatically.
 token_split_destination_cols <- c("q1", "r1", "q2", "r2", "q3", "r3", "q4", "r4", "q5", "r5")
 # document this regex token thoroughly
-token_split_regex <- "(:|(?<=[[:digit:]]),)"
+token_split_regex <- ":|(?<=[[:digit:]]),"
 
 # segregate super-sub cols
 df_super_sub_cols <- input %>% 
@@ -151,14 +152,15 @@ school_psych <- output %>%
   arrange(desc(value), .by_group = TRUE) %>% 
   replace_na(list(n = 0)) %>% 
   mutate(total = sum(n),
-         pct = round(100*(n/total), 1),
+         total_pct = round(100*(n/total), 1),
+         valid_pct = round(100*(n/total), 1),
          csum = cumsum(n),
-         cum_pct = round(100*(csum/total), 1),
+         valid_cum_pct = round(100*(csum/total), 1),
   ) %>% 
   separate(
     item,# source col for string to split
     c("super_q", "sub_q"), # destination cols for split parts of input string
-    "(:_)", #regex for chars to split on and drop from destination cols
+    ":_", #regex for chars to split on and drop from destination cols
     remove = TRUE # drop input string
   ) %>% mutate(
     super_q = case_when(
@@ -176,10 +178,18 @@ school_psych <- output %>%
       value == 2 ~ "below average",
       value == 1 ~ "poor",
       TRUE ~ NA_character_
-    )
-  ) %>% 
-  select(super_q, sub_q, value, label, n, total, pct, cum_pct)
+    ),
+    across(c(total_pct, valid_pct, valid_cum_pct), ~ format(., digits = 1, nsmall = 1)) # format ensures pct will print with 2 digits right of decimal
+    ) %>%
+  select(super_q, sub_q, value, label, n, total_pct, valid_pct, valid_cum_pct) %>% 
+  rename(freq = n) %>% 
+  as.data.frame() %>% # write.xlsx() needs to see a data frame, not a tibble
+  mutate(across(everything(), ~ replace_na(., ""))) %>% 
+  write.xlsx(
+    here("OUTPUT-FILES/school-psych-report.xlsx"),
+    sheetName = "school_psych",
+    row.names = FALSE,
+    append = FALSE
+  )
 
-write_csv(school_psych, here("OUTPUT-FILES/school-psych-report.csv"),
-          na = ""
-)
+
