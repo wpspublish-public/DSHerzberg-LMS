@@ -2,17 +2,12 @@ suppressMessages(library(here))
 suppressMessages(suppressWarnings(library(tidyverse)))
 suppressMessages(library(xlsx))
 
-# read input data
 input <-
   suppressMessages(read_csv(here(
     "INPUT-FILES/summary-evaluation-data.csv"
   )))
 
 names_input <- names(input)
-
-# This configuration of tokens assumes that the cols with super and subordinate
-# questions are in a single continuous block of cols. These tokens need to be
-# quoted and include white space.
 token_super_sub_first_col <- "General Live Webinar Experience"
 token_super_sub_last_col <- "Usefulness of Content"
 token_lhs_intact_cols <- c("First Name", "Last Name", "Email", "Credits")
@@ -20,12 +15,7 @@ token_rhs_intact_first_col <- str_c("How will you use the knowledge ",
                                     "gained from this course within your practice?")
 token_rhs_intact_last_col <- str_c("I certify that I am the person who ", 
                                    "attended the live webinar and completed this evaluation.")
-# the next token names the destination cols for output from splitting the
-# super-sub question cols. The cols are pairs: q for question, r for response.
-# This token should be set up with as many pairs as are in the question with the
-# MOST sub-questions. The script handles super qs with fewer sub qs automatically.
 token_split_destination_cols <- c("q1", "r1", "q2", "r2", "q3", "r3", "q4", "r4", "q5", "r5")
-# document this regex token thoroughly
 token_split_regex <- ":|(?<=[[:digit:]]),"
 
 # segregate super-sub cols
@@ -181,7 +171,7 @@ school_psych <- output %>%
     ),
     across(c(total_pct, valid_pct, valid_cum_pct), ~ format(., digits = 1, nsmall = 1)) # format ensures pct will print with 2 digits right of decimal
     ) %>%
-  select(super_q, sub_q, value, label, n, total_pct, valid_pct, valid_cum_pct) %>% 
+  select(super_q, sub_q, value, label, n, total_pct, valid_pct, valid_cum_pct, total) %>% 
   rename(freq = n) %>% 
   as.data.frame() %>% # write.xlsx() needs to see a data frame, not a tibble
   mutate(across(everything(), ~ replace_na(., ""))) %>% 

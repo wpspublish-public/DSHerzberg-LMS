@@ -14,15 +14,20 @@ This is a method for reading in output from WPS LMS system, cleaning up and refo
 One of the key elements of processing is to handle columns that include super-ordinate questions, sub-ordinate questions, and responses. Here is an example of one such column:
 
 ```
-  `Usefulness of Content`                                                                              
-1 How useful was the content of this CE program for your practice or other professional development?: 3
-2 How useful was the content of this CE program for your practice or other professional development?: 5
-3 How useful was the content of this CE program for your practice or other professional development?: 4
-4 How useful was the content of this CE program for your practice or other professional development?: 5
-5 How useful was the content of this CE program for your practice or other professional development?: 5
-6 How useful was the content of this CE program for your practice or other professional development?: 3
+   `General Live Webinar Experience`                                                                   
+
+ Overall educational experience: 3, Accessibility of platforms/materials: 3, Technical quality (e.g.…
+ Overall educational experience: 5, Accessibility of platforms/materials: 5, Technical quality (e.g.…
+ Overall educational experience: 5, Accessibility of platforms/materials: 4, Technical quality (e.g.…
+ Overall educational experience: 5, Accessibility of platforms/materials: 5, Technical quality (e.g.…
+ Overall educational experience: 5, Accessibility of platforms/materials: 4, Technical quality (e.g.…
+ Overall educational experience: 3, Accessibility of platforms/materials: 1, Technical quality (e.g.…
+ Overall educational experience: 5, Accessibility of platforms/materials: 5, Technical quality (e.g.…
+ Overall educational experience: 5, Accessibility of platforms/materials: 5, Technical quality (e.g.…
+ Overall educational experience: 5, Accessibility of platforms/materials: 5, Technical quality (e.g.…
+Overall educational experience: 5, Accessibility of platforms/materials: 5, Technical quality (e.g.…
 ```
-The column name, `Usefulness of Content` is a super-ordinate question. The row values going down the column contain both the sub-ordinate question `How useful was the content of this CE program for your practice or other professional development?`, and the numerical responses to that sub-ordinate question. This represents a classic "untidy" data input, and this code cleans it up by created separate columns for each super- and sub-ordinate question pair, with the rows containing numerical responses by person.
+The column name, `General Live Webinar Experience` is a super-ordinate question. The row values going down the column contain both the sub-ordinate questions (e.g., `Overall educational experience`, `Accessibility of platforms/materials`, etc.), and the numerical responses to those sub-ordinate questions. This represents a classic "untidy" data input, and this code cleans it up by creating separate columns for each super- and sub-ordinate question pair, with the rows containing numerical responses by person.
 
 ###### RUNNABLE CODE
 ```{r script, eval = FALSE}
@@ -154,7 +159,7 @@ school_psych <- output %>%
     ),
     across(c(total_pct, valid_pct, valid_cum_pct), ~ format(., digits = 1, nsmall = 1))
     ) %>%
-  select(super_q, sub_q, value, label, n, total_pct, valid_pct, valid_cum_pct) %>% 
+  select(super_q, sub_q, value, label, n, total_pct, valid_pct, valid_cum_pct, total) %>% 
   rename(freq = n) %>% 
   as.data.frame() %>%
   mutate(across(everything(), ~ replace_na(., ""))) %>% 
@@ -172,6 +177,26 @@ school_psych <- output %>%
 Load libraries and read input data.
 ```{r script, echo = 1:8, eval = FALSE}
 ```
-Initialize tokens representing job-specific elements.
+Initialize tokens representing job-specific elements. These tokens are of three types:
+
+* Tokens that allow subsequent code to segregate blocks of contiguous columns. These tokens either identify the boundary columns of these contiguous blocks (e.g, `token_super_sub_first_col`), or they contain the names of all of the columns in a block (e.g., `token_lhs_intact_cols`).
+* `token_split_destination_cols`, which holds the names of interim destination columns for the super/sub-ordinate question text (names contain `q`) and numerical responses (names contain `r`). The token is a character vector containing the destination column names in question-response pairs (e.g., `c("q1", "r1", "q2", "r2", "q3", "r3", "q4", "r4", "q5", "r5")`). 
+   + This vector should be set up to contain as many pairs as are required by the super-ordinate question that contains the MOST subordinate questions. 
+   + Super-ordinate questions with fewer subordinate questions are handled automatically by the code.
+* `token_split_regex`, which contains the regular expression (here `":|(?<=[[:digit:]]),"`) that allows R to segregate the question text and numerical responses within each cell, so that these components can be sent to separate destination columns.
+   + A _regular expression_ describes a text element to search for and match in data. In R, regular expressions are written as strings enclosed in double quotes.
+   + `:|(?<=[[:digit:]]),` contains two elements separated by `|`, meaning that it will match _either_ element.The LHS element is a colon `:`.
+   + The RHS contains two parts: an expression `<=[[:digit:]]` enclosed in specialized parentheses `(?...)`, and a comma `,`. The comma is the character to match, and the specialized parenthetic expression denotes a _look-around_, which defines a position where the comma must appear in order to yield a match.
+     + Within the specialized parentheses, we have `[[:digit:]]`, a character class that matches any digit from `0` to `9`. To its left is `<=`, which in this context is the "preceded by" look-around operator.
+     + Thus, `(?<=[[:digit:]])` is an instruction to look for a match to the right of a digit. Importantly, however, it does not, itself, match any text. It rather identifies a location to search.
+  + Taken as a whole, then, `":|(?<=[[:digit:]]),"` tells R to match _either_ a colon `:` _or_ a comma immediately preceded by a digit (i.e., in `3,`, R matches the `,`, but not the `3`). By matching only commas preceded by digits, we avoid matching other commas that may exist within a string that constitutes the text of a question.
+  + Earlier, we provided an example of cells containing a mixture of question text and numerical responses (e.g., `Overall educational experience: 3, Accessibility of...`). Note that the regular expression in `token_split_regex` is set up to match the two characters, `:` and `,`, that mark the boundaries between question text and numerical responses. And, as noted above, we match only the commas that are located in boundary positions, not commas that may be located within the text of a question.
 ```{r script, echo = 10:19, eval = FALSE}
+```
+We now use these tokens to segregate and process blocks of columns for downstream processing. Some details to note:
+
+* Within `dplyr::select()`, we can use tokens (e.g., `token_super_sub_first_col`, `token_super_sub_last_col`) to designate the first and last columns in a block. Because these tokens are character vectors, within `select()` we need to wrap them in the tidyselect helper `all_of()`.
+* We transform completion dates in the `Completed` column into a standard UTC format with `lubridate::mdy_hm()`, using the version of this function that matches the input format of the dates. We use `dplyr::transmute()` for this operation, because it discards the input column as it creates the new, properly formatted `Completed` column.
+* Some of the input columns are logical vectors, a format that is not needed in the output.
+```{r script, echo = 21:35, eval = FALSE}
 ```
