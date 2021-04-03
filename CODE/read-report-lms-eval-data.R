@@ -10,11 +10,20 @@ input <-
 names_input <- names(input)
 token_super_sub_first_col <- "General Live Webinar Experience"
 token_super_sub_last_col <- "Usefulness of Content"
+token_addl_cols_for_freq_counts <- c("Would you recommend this CE program to others?", 
+                                     "In general, what format do you prefer for webinars? Choose all that apply:", 
+                                     "In general, what time of day do you prefer to begin a live webinar?", 
+                                     "How did you learn about this CE program?", 
+                                     "What is your highest academic degree?",
+                                     "What is your field of work?", 
+                                     "I certify that I am the person who attended the live webinar and completed this evaluation.")
 token_lhs_intact_cols <- c("First Name", "Last Name", "Email", "Credits")
-token_rhs_intact_first_col <- str_c("How will you use the knowledge ", 
-                                    "gained from this course within your practice?")
-token_rhs_intact_last_col <- str_c("I certify that I am the person who ", 
-                                   "attended the live webinar and completed this evaluation.")
+token_rhs_text_cols <- c("How will you use the knowledge gained from this course within your practice?",
+                         "If you selected Other, please specify:",
+                         str_c("Please share any other feedback you have, including suggestions ",
+                         "for future continuing education you’d like to see available through WPS, ", 
+                         "such as specific topics for live workshops, webinars, or independent study opportunities:"),
+                         "If you selected Other, please specify:_1")
 token_split_destination_cols <- c("q1", "r1", "q2", "r2", "q3", "r3", "q4", "r4", "q5", "r5")
 token_split_regex <- ":|(?<=[[:digit:]]),"
 
@@ -27,13 +36,16 @@ date_col <- input %>%
   select(Completed) %>% 
   transmute(Completed = lubridate::mdy_hm(Completed))
 
-# segregate LHS and RHS side cols to leave intact for final output
+# segregate LHS and RHS side cols for final output
 lhs_cols <- input %>% 
   select(all_of(token_lhs_intact_cols)) %>% 
   mutate(across(where(is.logical), as.character))
 
-rhs_cols <- input %>% 
-  select(all_of(token_rhs_intact_first_col):all_of(token_rhs_intact_last_col))
+rhs_num_cols <- input %>% 
+  select(all_of(token_addl_cols_for_freq_counts))
+
+rhs_text_cols <- input %>% 
+  select(all_of(token_rhs_text_cols))
 
 # extract super-ordinate question name for output by replacing white space with
 # underscore, adding : as a separator for the subordinate question name, col
@@ -116,6 +128,9 @@ named_super_sub_r_cols <- map2(list_r_cols,  list_col_names,
                                       set_names(.y)) %>% 
   bind_cols()
 
+# process non-super/sub format cols that need freq counts
+#### SEE SCRATCH.R
+
 # configure final output
 
 output <- bind_cols(
@@ -134,7 +149,8 @@ write_csv(output,
 # only school psychologists
 school_psych <- output %>% 
   filter(`What is your field of work?` == "School Psychology") %>% 
-  select(all_of(names(named_super_sub_r_cols))) %>% 
+  select(all_of(names(named_super_sub_r_cols)), 
+         all_of(token_addl_cols_for_freq_counts)) %>% 
   pivot_longer(everything(), names_to = 'item', values_to = 'value') %>% 
   count(item, value) %>% 
   group_by(item) %>% 

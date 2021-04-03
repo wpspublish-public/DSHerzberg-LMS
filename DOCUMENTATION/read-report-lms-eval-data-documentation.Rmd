@@ -43,11 +43,20 @@ input <-
 names_input <- names(input)
 token_super_sub_first_col <- "General Live Webinar Experience"
 token_super_sub_last_col <- "Usefulness of Content"
+token_addl_cols_for_freq_counts <- c("Would you recommend this CE program to others?", 
+                                     "In general, what format do you prefer for webinars? Choose all that apply:", 
+                                     "In general, what time of day do you prefer to begin a live webinar?", 
+                                     "How did you learn about this CE program?", 
+                                     "What is your highest academic degree?",
+                                     "What is your field of work?", 
+                                     "I certify that I am the person who attended the live webinar and completed this evaluation.")
 token_lhs_intact_cols <- c("First Name", "Last Name", "Email", "Credits")
-token_rhs_intact_first_col <- str_c("How will you use the knowledge ", 
-                                    "gained from this course within your practice?")
-token_rhs_intact_last_col <- str_c("I certify that I am the person who ", 
-                                   "attended the live webinar and completed this evaluation.")
+token_rhs_text_cols <- c("How will you use the knowledge gained from this course within your practice?",
+                         "If you selected Other, please specify:",
+                         str_c("Please share any other feedback you have, including suggestions ",
+                         "for future continuing education you’d like to see available through WPS, ", 
+                         "such as specific topics for live workshops, webinars, or independent study opportunities:"),
+                         "If you selected Other, please specify:_1")
 token_split_destination_cols <- c("q1", "r1", "q2", "r2", "q3", "r3", "q4", "r4", "q5", "r5")
 token_split_regex <- ":|(?<=[[:digit:]]),"
 
@@ -62,8 +71,11 @@ lhs_cols <- input %>%
   select(all_of(token_lhs_intact_cols)) %>% 
   mutate(across(where(is.logical), as.character))
 
-rhs_cols <- input %>% 
-  select(all_of(token_rhs_intact_first_col):all_of(token_rhs_intact_last_col))
+rhs_num_cols <- input %>% 
+  select(all_of(token_addl_cols_for_freq_counts))
+
+rhs_text_cols <- input %>% 
+  select(all_of(token_rhs_text_cols))
 
 q_name <- str_c(str_replace_all(names(df_super_sub_cols), " ", "_"), ":")
 
@@ -191,12 +203,12 @@ Initialize tokens representing job-specific elements. These tokens are of three 
      + Thus, `(?<=[[:digit:]])` is an instruction to look for a match to the right of a digit. Importantly, however, it does not, itself, match any text. It rather identifies a location to search.
   + Taken as a whole, then, `":|(?<=[[:digit:]]),"` tells R to match _either_ a colon `:` _or_ a comma immediately preceded by a digit (i.e., in `3,`, R matches the `,`, but not the `3`). By matching only commas preceded by digits, we avoid matching other commas that may exist within a string that constitutes the text of a question.
   + Earlier, we provided an example of cells containing a mixture of question text and numerical responses (e.g., `Overall educational experience: 3, Accessibility of...`). Note that the regular expression in `token_split_regex` is set up to match the two characters, `:` and `,`, that mark the boundaries between question text and numerical responses. And, as noted above, we match only the commas that are located in boundary positions, not commas that may be located within the text of a question.
-```{r script, echo = 10:19, eval = FALSE}
+```{r script, echo = 10:28, eval = FALSE}
 ```
 We now use these tokens to segregate and process blocks of columns for downstream processing. Some details to note:
 
 * Within `dplyr::select()`, we can use tokens (e.g., `token_super_sub_first_col`, `token_super_sub_last_col`) to designate the first and last columns in a block. Because these tokens are character vectors, within `select()` we need to wrap them in the tidyselect helper `all_of()`.
 * We transform completion dates in the `Completed` column into a standard UTC format with `lubridate::mdy_hm()`, using the version of this function that matches the input format of the dates. We use `dplyr::transmute()` for this operation, because it discards the input column as it creates the new, properly formatted `Completed` column.
 * Some of the input columns are logical vectors, a format that is not needed in the output.
-```{r script, echo = 21:35, eval = FALSE}
+```{r script, echo = 30:47, eval = FALSE}
 ```

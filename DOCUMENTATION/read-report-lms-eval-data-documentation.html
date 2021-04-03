@@ -199,11 +199,20 @@ input &lt;-
 names_input &lt;- names(input)
 token_super_sub_first_col &lt;- &quot;General Live Webinar Experience&quot;
 token_super_sub_last_col &lt;- &quot;Usefulness of Content&quot;
+token_addl_cols_for_freq_counts &lt;- c(&quot;Would you recommend this CE program to others?&quot;, 
+                                     &quot;In general, what format do you prefer for webinars? Choose all that apply:&quot;, 
+                                     &quot;In general, what time of day do you prefer to begin a live webinar?&quot;, 
+                                     &quot;How did you learn about this CE program?&quot;, 
+                                     &quot;What is your highest academic degree?&quot;,
+                                     &quot;What is your field of work?&quot;, 
+                                     &quot;I certify that I am the person who attended the live webinar and completed this evaluation.&quot;)
 token_lhs_intact_cols &lt;- c(&quot;First Name&quot;, &quot;Last Name&quot;, &quot;Email&quot;, &quot;Credits&quot;)
-token_rhs_intact_first_col &lt;- str_c(&quot;How will you use the knowledge &quot;, 
-                                    &quot;gained from this course within your practice?&quot;)
-token_rhs_intact_last_col &lt;- str_c(&quot;I certify that I am the person who &quot;, 
-                                   &quot;attended the live webinar and completed this evaluation.&quot;)
+token_rhs_text_cols &lt;- c(&quot;How will you use the knowledge gained from this course within your practice?&quot;,
+                         &quot;If you selected Other, please specify:&quot;,
+                         str_c(&quot;Please share any other feedback you have, including suggestions &quot;,
+                         &quot;for future continuing education you’d like to see available through WPS, &quot;, 
+                         &quot;such as specific topics for live workshops, webinars, or independent study opportunities:&quot;),
+                         &quot;If you selected Other, please specify:_1&quot;)
 token_split_destination_cols &lt;- c(&quot;q1&quot;, &quot;r1&quot;, &quot;q2&quot;, &quot;r2&quot;, &quot;q3&quot;, &quot;r3&quot;, &quot;q4&quot;, &quot;r4&quot;, &quot;q5&quot;, &quot;r5&quot;)
 token_split_regex &lt;- &quot;:|(?&lt;=[[:digit:]]),&quot;
 
@@ -218,8 +227,11 @@ lhs_cols &lt;- input %&gt;%
   select(all_of(token_lhs_intact_cols)) %&gt;% 
   mutate(across(where(is.logical), as.character))
 
-rhs_cols &lt;- input %&gt;% 
-  select(all_of(token_rhs_intact_first_col):all_of(token_rhs_intact_last_col))
+rhs_num_cols &lt;- input %&gt;% 
+  select(all_of(token_addl_cols_for_freq_counts))
+
+rhs_text_cols &lt;- input %&gt;% 
+  select(all_of(token_rhs_text_cols))
 
 q_name &lt;- str_c(str_replace_all(names(df_super_sub_cols), &quot; &quot;, &quot;_&quot;), &quot;:&quot;)
 
@@ -362,14 +374,28 @@ input &lt;-
 <pre class="r"><code>names_input &lt;- names(input)
 token_super_sub_first_col &lt;- &quot;General Live Webinar Experience&quot;
 token_super_sub_last_col &lt;- &quot;Usefulness of Content&quot;
+token_addl_cols_for_freq_counts &lt;- c(&quot;Would you recommend this CE program to others?&quot;, 
+                                     &quot;In general, what format do you prefer for webinars? Choose all that apply:&quot;, 
+                                     &quot;In general, what time of day do you prefer to begin a live webinar?&quot;, 
+                                     &quot;How did you learn about this CE program?&quot;, 
+                                     &quot;What is your highest academic degree?&quot;,
+                                     &quot;What is your field of work?&quot;, 
+                                     &quot;I certify that I am the person who attended the live webinar and completed this evaluation.&quot;)
 token_lhs_intact_cols &lt;- c(&quot;First Name&quot;, &quot;Last Name&quot;, &quot;Email&quot;, &quot;Credits&quot;)
-token_rhs_intact_first_col &lt;- str_c(&quot;How will you use the knowledge &quot;, 
-                                    &quot;gained from this course within your practice?&quot;)
-token_rhs_intact_last_col &lt;- str_c(&quot;I certify that I am the person who &quot;, 
-                                   &quot;attended the live webinar and completed this evaluation.&quot;)
+token_rhs_text_cols &lt;- c(&quot;How will you use the knowledge gained from this course within your practice?&quot;,
+                         &quot;If you selected Other, please specify:&quot;,
+                         str_c(&quot;Please share any other feedback you have, including suggestions &quot;,
+                         &quot;for future continuing education you’d like to see available through WPS, &quot;, 
+                         &quot;such as specific topics for live workshops, webinars, or independent study opportunities:&quot;),
+                         &quot;If you selected Other, please specify:_1&quot;)
 token_split_destination_cols &lt;- c(&quot;q1&quot;, &quot;r1&quot;, &quot;q2&quot;, &quot;r2&quot;, &quot;q3&quot;, &quot;r3&quot;, &quot;q4&quot;, &quot;r4&quot;, &quot;q5&quot;, &quot;r5&quot;)
 token_split_regex &lt;- &quot;:|(?&lt;=[[:digit:]]),&quot;</code></pre>
-<p>question.</p>
+<p>We now use these tokens to segregate and process blocks of columns for downstream processing. Some details to note:</p>
+<ul>
+<li>Within <code>dplyr::select()</code>, we can use tokens (e.g., <code>token_super_sub_first_col</code>, <code>token_super_sub_last_col</code>) to designate the first and last columns in a block. Because these tokens are character vectors, within <code>select()</code> we need to wrap them in the tidyselect helper <code>all_of()</code>.</li>
+<li>We transform completion dates in the <code>Completed</code> column into a standard UTC format with <code>lubridate::mdy_hm()</code>, using the version of this function that matches the input format of the dates. We use <code>dplyr::transmute()</code> for this operation, because it discards the input column as it creates the new, properly formatted <code>Completed</code> column.</li>
+<li>Some of the input columns are logical vectors, a format that is not needed in the output.</li>
+</ul>
 <pre class="r"><code>df_super_sub_cols &lt;- input %&gt;% 
   select(all_of(token_super_sub_first_col):all_of(token_super_sub_last_col))
 
@@ -381,8 +407,11 @@ lhs_cols &lt;- input %&gt;%
   select(all_of(token_lhs_intact_cols)) %&gt;% 
   mutate(across(where(is.logical), as.character))
 
-rhs_cols &lt;- input %&gt;% 
-  select(all_of(token_rhs_intact_first_col):all_of(token_rhs_intact_last_col))
+rhs_num_cols &lt;- input %&gt;% 
+  select(all_of(token_addl_cols_for_freq_counts))
+
+rhs_text_cols &lt;- input %&gt;% 
+  select(all_of(token_rhs_text_cols))
 
 q_name &lt;- str_c(str_replace_all(names(df_super_sub_cols), &quot; &quot;, &quot;_&quot;), &quot;:&quot;)</code></pre>
 </div>
