@@ -82,9 +82,119 @@ temp2 <- rhs_num_cols %>%
   count(item, value) %>%   
   group_by(item)
 
-# NEXT: TO USE complete(), ON ITEMS WITH DIFFERENT NUMBERS OF RESPONSE OPTIONS,
-# MAY NEED TO BREAK INTO SEPARATE DFS BY ITEM, APPLY complete(), AND THEN
-# REASSEMBLE LONG TABLE.
 
+temp3 <- map(names(rhs_num_cols), 
+             ~
+               temp2 %>% 
+               filter(item == .x)
+) %>% set_names(names(rhs_num_cols))
+
+
+temp4 <- tibble(input = temp3,
+                upper = c(2, 6, 3, 7, 5, 14, 1))
+
+
+temp5 <- temp4 %>% 
+  mutate(output =
+           map2(
+             input,
+             upper,
+             ~
+               .x %>% 
+               complete(value = 1:.y)
+           )
+  ) %>% 
+  select(output) %>% 
+  unnest(cols = c(output)) %>% 
+  group_by(item) %>% 
+  arrange(desc(value), .by_group = TRUE) %>% 
+  replace_na(list(n = 0)) %>% 
+  mutate(total = sum(n),
+         total_pct = round(100*(n/total), 1),
+         valid_pct = round(100*(n/total), 1),
+         csum = cumsum(n),
+         valid_cum_pct = round(100*(csum/total), 1),
+  )
+  
+
+
+# CODE LABEL VAR
+
+across(
+  `Would you recommend this CE program to others?`,
+  ~ case_when(.x ==  1 ~ "Yes",
+              .x == 2 ~ "No",
+              TRUE ~ NA_character_)
+),
+across(
+  `In general, what format do you prefer for webinars? Choose all that apply:`,
+  ~ case_when(
+    .x == 1 ~ "Single half-day (3–4 hours/day)",
+    .x == 2 ~ "Single full-day (5–6 hours/day)",
+    .x == 3 ~ "Multiday (half-days)",
+    .x == 4 ~ "Multiday (full-days)",
+    .x == 5 ~ "Pre-recorded at own pace (no live instruction)",
+    .x == 6 ~ "Blended instruction (live webinar combined with independent study)",
+    TRUE ~ NA_character_
+  )
+),
+across(
+  `In general, what time of day do you prefer to begin a live webinar?`,
+  ~ case_when(
+    .x == 1 ~ "Morning",
+    .x == 2 ~ "Afternoon",
+    .x == 3 ~ "Evening",
+    TRUE ~ NA_character_
+  )
+),
+across(
+  `How did you learn about this CE program?`,
+  ~ case_when(
+    .x == 1 ~ "WPS website",
+    .x == 2 ~ "WPS catalog/print advertisement",
+    .x == 3 ~ "Direct email from WPS",
+    .x == 4 ~ "Social media (e.g., Facebook)",
+    .x == 5 ~ "Supervisor",
+    .x == 6 ~ "Colleague",
+    .x == 7 ~ "Other (answer in next question)",
+    TRUE ~ NA_character_
+  )
+),
+across(
+  `What is your highest academic degree?`,
+  ~ case_when(
+    .x == 1 ~ "Doctorate",
+    .x == 2 ~ "Master’s (MSW, MS, MA)",
+    .x == 3 ~ "Bachelor’s (BS, BA)",
+    .x == 4 ~ "Associates",
+    .x == 5 ~ "No college degree",
+    TRUE ~ NA_character_
+  )
+),
+across(
+  `What is your field of work?`,
+  ~ case_when(
+    .x == 1 ~ "Applied Behavior Analysis (ABA; BABCP)",
+    .x == 2 ~ "Clinical Psychology",
+    .x == 3 ~ "Counseling",
+    .x == 4 ~ "Educational Diagnostician/Psychometrist",
+    .x == 5 ~ "Medicine",
+    .x == 6 ~ "Neuropsychology",
+    .x == 7 ~ "Occupational Therapy",
+    .x == 8 ~ "Physical Therapy",
+    .x == 9 ~ "Psychiatry",
+    .x == 10 ~ "School Psychology",
+    .x == 11 ~ "Social Work",
+    .x == 12 ~ "Special Education",
+    .x == 13 ~ "Speech–Language Pathology/Audiology",
+    .x == 14 ~ "Other (answer in next question)",
+    TRUE ~ NA_character_
+  )
+),
+across(
+  `I certify that I am the person who attended the live webinar and completed this evaluation.`,
+  ~ case_when(.x == 1 ~ "Yes",
+              TRUE ~ NA_character_)
+)
 
        
