@@ -209,6 +209,6 @@ We now use these tokens to segregate and process blocks of columns for downstrea
 
 * Within `dplyr::select()`, we can use tokens (e.g., `token_super_sub_first_col`, `token_super_sub_last_col`) to designate the first and last columns in a block. Because these tokens are character vectors, within `select()` we need to wrap them in the tidyselect helper `all_of()`.
 * We transform completion dates in the `Completed` column into a standard UTC format with `lubridate::mdy_hm()`, using the version of this function that matches the input format of the dates. We use `dplyr::transmute()` for this operation, because it discards the input column as it creates the new, properly formatted `Completed` column.
-* Some of the input columns are logical vectors, a format that is not needed in the output.
+* Some of the input columns are logical vectors, a format that is not needed in the output. We transform these columns to character type with `mutate(across(where(is.logical), as.character))`.
 ```{r script, echo = 30:47, eval = FALSE}
 ```

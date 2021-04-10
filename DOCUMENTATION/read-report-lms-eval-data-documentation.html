@@ -394,7 +394,7 @@ token_split_regex &lt;- &quot;:|(?&lt;=[[:digit:]]),&quot;</code></pre>
 <ul>
 <li>Within <code>dplyr::select()</code>, we can use tokens (e.g., <code>token_super_sub_first_col</code>, <code>token_super_sub_last_col</code>) to designate the first and last columns in a block. Because these tokens are character vectors, within <code>select()</code> we need to wrap them in the tidyselect helper <code>all_of()</code>.</li>
 <li>We transform completion dates in the <code>Completed</code> column into a standard UTC format with <code>lubridate::mdy_hm()</code>, using the version of this function that matches the input format of the dates. We use <code>dplyr::transmute()</code> for this operation, because it discards the input column as it creates the new, properly formatted <code>Completed</code> column.</li>
-<li>Some of the input columns are logical vectors, a format that is not needed in the output.</li>
+<li>Some of the input columns are logical vectors, a format that is not needed in the output. We transform these columns to character type with <code>mutate(across(where(is.logical), as.character))</code>.</li>
 </ul>
 <pre class="r"><code>df_super_sub_cols &lt;- input %&gt;% 
   select(all_of(token_super_sub_first_col):all_of(token_super_sub_last_col))

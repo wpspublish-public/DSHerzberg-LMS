@@ -116,85 +116,142 @@ temp5 <- temp4 %>%
          valid_cum_pct = round(100*(csum/total), 1),
   )
   
+# Set up item-value-label mapping in a df
 
-
-# CODE LABEL VAR
-
-across(
-  `Would you recommend this CE program to others?`,
-  ~ case_when(.x ==  1 ~ "Yes",
-              .x == 2 ~ "No",
-              TRUE ~ NA_character_)
-),
-across(
-  `In general, what format do you prefer for webinars? Choose all that apply:`,
-  ~ case_when(
-    .x == 1 ~ "Single half-day (3–4 hours/day)",
-    .x == 2 ~ "Single full-day (5–6 hours/day)",
-    .x == 3 ~ "Multiday (half-days)",
-    .x == 4 ~ "Multiday (full-days)",
-    .x == 5 ~ "Pre-recorded at own pace (no live instruction)",
-    .x == 6 ~ "Blended instruction (live webinar combined with independent study)",
-    TRUE ~ NA_character_
-  )
-),
-across(
-  `In general, what time of day do you prefer to begin a live webinar?`,
-  ~ case_when(
-    .x == 1 ~ "Morning",
-    .x == 2 ~ "Afternoon",
-    .x == 3 ~ "Evening",
-    TRUE ~ NA_character_
-  )
-),
-across(
-  `How did you learn about this CE program?`,
-  ~ case_when(
-    .x == 1 ~ "WPS website",
-    .x == 2 ~ "WPS catalog/print advertisement",
-    .x == 3 ~ "Direct email from WPS",
-    .x == 4 ~ "Social media (e.g., Facebook)",
-    .x == 5 ~ "Supervisor",
-    .x == 6 ~ "Colleague",
-    .x == 7 ~ "Other (answer in next question)",
-    TRUE ~ NA_character_
-  )
-),
-across(
-  `What is your highest academic degree?`,
-  ~ case_when(
-    .x == 1 ~ "Doctorate",
-    .x == 2 ~ "Master’s (MSW, MS, MA)",
-    .x == 3 ~ "Bachelor’s (BS, BA)",
-    .x == 4 ~ "Associates",
-    .x == 5 ~ "No college degree",
-    TRUE ~ NA_character_
-  )
-),
-across(
-  `What is your field of work?`,
-  ~ case_when(
-    .x == 1 ~ "Applied Behavior Analysis (ABA; BABCP)",
-    .x == 2 ~ "Clinical Psychology",
-    .x == 3 ~ "Counseling",
-    .x == 4 ~ "Educational Diagnostician/Psychometrist",
-    .x == 5 ~ "Medicine",
-    .x == 6 ~ "Neuropsychology",
-    .x == 7 ~ "Occupational Therapy",
-    .x == 8 ~ "Physical Therapy",
-    .x == 9 ~ "Psychiatry",
-    .x == 10 ~ "School Psychology",
-    .x == 11 ~ "Social Work",
-    .x == 12 ~ "Special Education",
-    .x == 13 ~ "Speech–Language Pathology/Audiology",
-    .x == 14 ~ "Other (answer in next question)",
-    TRUE ~ NA_character_
-  )
-),
-across(
-  `I certify that I am the person who attended the live webinar and completed this evaluation.`,
-  ~ case_when(.x == 1 ~ "Yes",
-              TRUE ~ NA_character_)
+recommend_CE <- tibble(
+  item = rep("Would you recommend this CE program to others?", 2),
+  value = 1:2,
+  label = c("Yes", "No")
 )
 
-       
+webinar_format <- tibble(
+  item = rep(
+    str_c(
+      "In general, what format do you prefer ",
+      "for webinars? Choose all that apply:"
+    ),
+    6
+  ),
+  value = 1:6,
+  label = c(
+    "Single half-day (3–4 hours/day)",
+    "Single full-day (5–6 hours/day)",
+    "Multiday (half-days)",
+    "Multiday (full-days)",
+    "Pre-recorded at own pace (no live instruction)",
+    "Blended instruction (live webinar combined with independent study)"
+  )
+)
+
+webinar_time <- tibble(
+  item = rep("In general, what time of day do you prefer to begin a live webinar?",
+             3),
+  value = 1:3,
+  label = c("Morning",
+            "Afternoon",
+            "Evening")
+)
+
+learn_CE <- tibble(
+  item = rep("How did you learn about this CE program?",
+             7),
+  value = 1:7,
+  label = c(
+    "WPS website",
+    "WPS catalog/print advertisement",
+    "Direct email from WPS",
+    "Social media (e.g., Facebook)",
+    "Supervisor",
+    "Colleague",
+    "Other (answer in next question)"
+  )
+)
+
+highest_degree <- tibble(
+  item = rep("What is your highest academic degree?",
+             5),
+  value = 1:5,
+  label = c(
+    "Doctorate",
+    "Master’s (MSW, MS, MA)",
+    "Bachelor’s (BS, BA)",
+    "Associates",
+    "No college degree"
+  )
+)
+
+field_work <- tibble(
+  item = rep("What is your field of work?",
+             14),
+  value = 1:14,
+  label = c(
+    "Applied Behavior Analysis (ABA; BABCP)",
+    "Clinical Psychology",
+    "Counseling",
+    "Educational Diagnostician/Psychometrist",
+    "Medicine",
+    "Neuropsychology",
+    "Occupational Therapy",
+    "Physical Therapy",
+    "Psychiatry",
+    "School Psychology",
+    "Social Work",
+    "Special Education",
+    "Speech–Language Pathology/Audiology",
+    "Other (answer in next question)"
+  )
+)
+
+certify_attend <- tibble(
+  item =
+    str_c(
+      "I certify that I am the person who attended ",
+      "the live webinar and completed this evaluation."
+    ),
+  value = 1,
+  label = "Yes"
+)
+
+item_value_label_map <- bind_rows(
+  recommend_CE,
+  webinar_format,
+  webinar_time,
+  learn_CE,
+  highest_degree,
+  field_work,
+  certify_attend
+)
+
+# build freq table
+
+freq_table <- rhs_num_cols %>% 
+  pivot_longer(everything(), names_to = 'item', values_to = 'value') %>% 
+  count(item,value) %>% 
+  rename(label = value) %>% 
+  right_join(item_value_label_map, by = c("item", "label")) %>%
+  relocate(value, .after = item) %>% 
+  group_by(item) %>% 
+  arrange(desc(value), .by_group = TRUE) %>% 
+  # next line will disappear for future versions of this template. It exists
+  # here only to get rid of garbage rows that account for cells where more than
+  # one response was entered. The LMS output no longer permits multiple
+  # responses to a single quesiton.
+  filter(!is.na(value)) %>% 
+  replace_na(list(n = 0)) %>% 
+  mutate(total = sum(n),
+         total_pct = round(100*(n/total), 1),
+         valid_pct = round(100*(n/total), 1),
+         csum = cumsum(n),
+         valid_cum_pct = round(100*(csum/total), 1),
+  ) %>% mutate(
+    item = case_when(
+      lag(item) == item  ~ NA_character_,
+      TRUE ~ item
+    ), across(c(total_pct, valid_pct, valid_cum_pct), ~ format(., digits = 1, nsmall = 1)) 
+    # format ensures pct will print with 1 digit right of decimal
+  ) %>%
+  select(item, value, label, n, total_pct, valid_pct, valid_cum_pct, total) %>% 
+  rename(freq = n) %>% 
+  mutate(across(item, ~ replace_na(., "")))
+  
+

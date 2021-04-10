@@ -1,6 +1,6 @@
 suppressMessages(library(here))
 suppressMessages(suppressWarnings(library(tidyverse)))
-suppressMessages(library(xlsx))
+suppressMessages(library(writexl))
 
 input <-
   suppressMessages(read_csv(here(
@@ -137,7 +137,8 @@ output <- bind_cols(
   lhs_cols,
   date_col,
   named_super_sub_r_cols,
-  rhs_cols
+  rhs_num_cols,
+  rhs_text_cols
 )
 
 # write output to .csv
@@ -149,8 +150,8 @@ write_csv(output,
 # only school psychologists
 school_psych <- output %>% 
   filter(`What is your field of work?` == "School Psychology") %>% 
-  select(all_of(names(named_super_sub_r_cols)), 
-         all_of(token_addl_cols_for_freq_counts)) %>% 
+  select(all_of(names(named_super_sub_r_cols))) %>%  
+         # all_of(token_addl_cols_for_freq_counts)) %>% 
   pivot_longer(everything(), names_to = 'item', values_to = 'value') %>% 
   count(item, value) %>% 
   group_by(item) %>% 
@@ -189,13 +190,11 @@ school_psych <- output %>%
     ) %>%
   select(super_q, sub_q, value, label, n, total_pct, valid_pct, valid_cum_pct, total) %>% 
   rename(freq = n) %>% 
-  as.data.frame() %>% # write.xlsx() needs to see a data frame, not a tibble
-  mutate(across(everything(), ~ replace_na(., ""))) %>% 
-  write.xlsx(
-    here("OUTPUT-FILES/school-psych-report.xlsx"),
-    sheetName = "school_psych",
-    row.names = FALSE,
-    append = FALSE
-  )
+  mutate(across(everything(), ~ replace_na(., "")))
+
+write_xlsx(
+  list(school_psych = school_psych), 
+  here("OUTPUT-FILES/school-psych-report.xlsx")
+)
 
 
