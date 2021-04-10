@@ -238,6 +238,8 @@ freq_table <- rhs_num_cols %>%
   # responses to a single quesiton.
   filter(!is.na(value)) %>% 
   replace_na(list(n = 0)) %>% 
+  # need to ungroup() before calling across(), grouped input messes with across()
+  ungroup() %>% 
   mutate(total = sum(n),
          total_pct = round(100*(n/total), 1),
          valid_pct = round(100*(n/total), 1),
