@@ -4,14 +4,14 @@ suppressMessages(library(writexl))
 
 input <-
   suppressMessages(read_csv(here(
-    "INPUT-FILES/summary-evaluation-data.csv"
+    "INPUT-FILES/input-survey-ados2-workshop-2021-04-16.csv"
   )))
 
 names_input <- names(input)
-token_super_sub_first_col <- "General Live Webinar Experience"
+token_super_sub_first_col <- "Access/Setting/Overall Experience"
 token_super_sub_last_col <- "Usefulness of Content"
 token_addl_cols_for_freq_counts <- c("Would you recommend this CE program to others?", 
-                                     "In general, what format do you prefer for webinars? Choose all that apply:", 
+                                     "In general, what format do you prefer for webinars?", 
                                      "In general, what time of day do you prefer to begin a live webinar?", 
                                      "How did you learn about this CE program?", 
                                      "What is your highest academic degree?",
@@ -26,6 +26,10 @@ token_rhs_text_cols <- c("How will you use the knowledge gained from this course
                          "If you selected Other, please specify:_1")
 token_split_destination_cols <- c("q1", "r1", "q2", "r2", "q3", "r3", "q4", "r4", "q5", "r5")
 token_split_regex <- ":|(?<=[[:digit:]]),"
+
+# START HERE
+# need variable-lenghth look behind according to this solution:
+# https://stackoverflow.com/questions/29308348/r-workaround-for-variable-width-lookbehind
 
 # segregate super-sub cols
 df_super_sub_cols <- input %>% 
@@ -229,15 +233,12 @@ list_col_names <- map2(list_sub_q_names,
 # we name the cols of numerical responses with the vec of names we just created.
 # As previously, we map2() over the list of col names, and the list of dfs
 # containing the sub question responses. This returns a list of dfs with the
-# cols named as required. We used bind_cols() to bind the separate dfs into a
+# cols named as required. We use bind_cols() to bind the separate dfs into a
 # single df.
 named_super_sub_r_cols <- map2(list_r_cols,  list_col_names,
                                     ~ .x %>%
                                       set_names(.y)) %>% 
   bind_cols()
-
-# process non-super/sub format cols that need freq counts
-#### SEE SCRATCH.R
 
 # configure final output
 
