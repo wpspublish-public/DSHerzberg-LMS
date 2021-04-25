@@ -187,6 +187,7 @@ list_super_sub_cols <- map(
 )
 
 # START HERE: COLS ARE SPLIT PROPERLY, BUT NEED TO GET RID OF CERTAIN TEXT ELEMENTS ACROSS COLS.
+# also need to strip white space out of r cols and make them numeric
 
 
 # The cells of the final output need to be the numerical response values to the
