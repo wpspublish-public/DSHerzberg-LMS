@@ -25,11 +25,8 @@ token_rhs_text_cols <- c("How will you use the knowledge gained from this course
                          "such as specific topics for live workshops, webinars, or independent study opportunities:"),
                          "If you selected Other, please specify:_1")
 token_split_destination_cols <- c("q1", "r1", "q2", "r2", "q3", "r3", "q4", "r4", "q5", "r5")
-token_split_regex <- ":|(?<=[[:digit:]]),"
-
-# START HERE
-# need variable-lenghth look behind according to this solution:
-# https://stackoverflow.com/questions/29308348/r-workaround-for-variable-width-lookbehind
+# DOCUMENT USE OF SQUARE BRACKETS TO MATCH VERTICAL PIPE IN REGEX
+token_split_regex <- ":|[|]"
 
 # segregate super-sub cols
 df_super_sub_cols <- input %>% 
@@ -188,6 +185,9 @@ list_super_sub_cols <- map(
     ) %>% 
     janitor::remove_empty("cols")
 )
+
+# START HERE: COLS ARE SPLIT PROPERLY, BUT NEED TO GET RID OF CERTAIN TEXT ELEMENTS ACROSS COLS.
+
 
 # The cells of the final output need to be the numerical response values to the
 # questions. Next snippet selects() the cols holding these response values,
