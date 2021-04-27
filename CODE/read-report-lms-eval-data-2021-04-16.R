@@ -182,13 +182,11 @@ list_super_sub_cols <- map(
       all_of(token_split_destination_cols),
       token_split_regex,
       remove = TRUE
-    ) %>% 
-    janitor::remove_empty("cols")
-)
+    # ) %>% 
+    # janitor::remove_empty("cols")
+))
 
 # START HERE: COLS ARE SPLIT PROPERLY, BUT NEED TO GET RID OF CERTAIN TEXT ELEMENTS ACROSS COLS.
-# also need to strip white space out of r cols and make them numeric
-
 
 # The cells of the final output need to be the numerical response values to the
 # questions. Next snippet selects() the cols holding these response values,
@@ -207,18 +205,28 @@ list_r_cols <- map(list_super_sub_cols,
 # cols, but we need them to be in a vec so they can be used as part of col names
 # on the final output table. We select the sub-question cols, filter only the
 # first row to capture just the names we need without any dups, apply
-# as.character to transform the df row into a vec, and strip out whitespace.
-# Here we are mapping over a list containing dfs, and feeding one data frame per
-# iteration with .x. Map returns a list of vecs containing the sub-question names
-# associated with each df.
+# as.character to transform the df row into a vec, strip out whitespace and
+# other garbage text. Note how str_replace_all() can take a vector of strings
+# matched to replacements. Thus it can handle searching for multiple different
+# sttings within a single call. Here we are mapping over a list containing dfs,
+# and feeding one data frame per iteration with .x. Map returns a list of vecs
+# containing the sub-question names associated with each df.
 list_sub_q_names <- map(
   list_super_sub_cols,
   ~ .x %>%
     select(contains("q")) %>%
     filter(row_number() == 1) %>%
     as.character() %>%
-    str_replace_all(" ", "_")
-)
+    str_replace_all(" ", "_") %>% 
+    str_replace_all(
+      c(
+        "_Excellent,_" = "",
+        "_Above average,_" = "",
+        "_Average,_" = "",
+        "_Below average,_" = "",
+        "_Poor,_" = ""
+      )
+    ))
 
 # now we create the vector of col names for output by concatenating the
 # super-ordinate q_name (which gets recycled), with the sub-ordinate q_names. We
