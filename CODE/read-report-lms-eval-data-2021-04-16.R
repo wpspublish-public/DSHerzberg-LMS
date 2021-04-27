@@ -7,6 +7,10 @@ input <-
     "INPUT-FILES/input-survey-ados2-workshop-2021-04-16.csv"
   )))
 
+########### START HERE: CREATE input_clean BASED ON CODE IN scratch.R
+
+
+
 names_input <- names(input)
 token_super_sub_first_col <- "Access/Setting/Overall Experience"
 token_super_sub_last_col <- "Usefulness of Content"
@@ -26,11 +30,30 @@ token_rhs_text_cols <- c("How will you use the knowledge gained from this course
                          "If you selected Other, please specify:_1")
 token_split_destination_cols <- c("q1", "r1", "q2", "r2", "q3", "r3", "q4", "r4", "q5", "r5")
 # DOCUMENT USE OF SQUARE BRACKETS TO MATCH VERTICAL PIPE IN REGEX
-token_split_regex <- ":|[|]"
+# token_split_regex <- ":|[|]"
+token_split_regex <- ":|(?<=[[:digit:]]),"
 
-# segregate super-sub cols
+# DOCUMENT USE OF SQUARE BRACKETS WHEN VERTICAL PIPE USED IN STRING EXPRESSION
+# segregate super-sub cols. Also clean up superfluous rating labels with
+# str_replace_all(), which can take a vector of pattern-replacement pairs.
 df_super_sub_cols <- input %>% 
-  select(all_of(token_super_sub_first_col):all_of(token_super_sub_last_col))
+  select(all_of(token_super_sub_first_col):all_of(token_super_sub_last_col)) %>% 
+  mutate(across(everything(),
+                ~ str_replace_all(
+                  .,
+                  c(
+                    " [|] Excellent" = "",
+                    " [|] Above average" = "",
+                    " [|] Average" = "",
+                    " [|] Below average" = "",
+                    " [|] Poor" = "",
+                    " [|] Strongly agree" = "",
+                    " [|] Agree" = "",
+                    " [|] Neutral" = "",
+                    " [|] Disagree" = "",
+                    " [|] Strongly disagree" = ""
+                  )
+                )))
 
 # segregate and process date-time col
 date_col <- input %>% 
@@ -182,11 +205,9 @@ list_super_sub_cols <- map(
       all_of(token_split_destination_cols),
       token_split_regex,
       remove = TRUE
-    # ) %>% 
-    # janitor::remove_empty("cols")
-))
-
-# START HERE: COLS ARE SPLIT PROPERLY, BUT NEED TO GET RID OF CERTAIN TEXT ELEMENTS ACROSS COLS.
+    ) %>%
+    janitor::remove_empty("cols")
+)
 
 # The cells of the final output need to be the numerical response values to the
 # questions. Next snippet selects() the cols holding these response values,
@@ -261,7 +282,7 @@ output <- bind_cols(
 
 # write output to .csv
 write_csv(output,
-          here("OUTPUT-FILES/lms-output.csv"),
+          here("OUTPUT-FILES/lms-output-survey-ados2-workshop-2021-04-16.csv"),
           na = "")
 
 # create report for RAs that gives freq counts of responses by question, for
