@@ -1,133 +1,39 @@
-super_q,sub_q,value,label,freq,total_pct,valid_pct,valid_cum_pct,total
-Access/Setting/Overall_Experience,Accessibility_of_platforms/materials,5,excellent,10, 50.0, 50.0, 50.0,20
-,,4,above average,6, 30.0, 30.0, 80.0,20
-,,3,average,4, 20.0, 20.0,100.0,20
-,,2,below average,0,  0.0,  0.0,100.0,20
-,,1,poor,0,  0.0,  0.0,100.0,20
-,"Accessing_the_webinar_(e.g.,_purchasing/registering,_logging_in)",5,excellent,14, 70.0, 70.0, 70.0,20
-,,4,above average,4, 20.0, 20.0, 90.0,20
-,,3,average,2, 10.0, 10.0,100.0,20
-,,2,below average,0,  0.0,  0.0,100.0,20
-,,1,poor,0,  0.0,  0.0,100.0,20
-,"Clarity_and_timeliness_of_information/materials_received_(e.g.,_emails_from_WPS,_course_materials)",5,excellent,10, 50.0, 50.0, 50.0,20
-,,4,above average,6, 30.0, 30.0, 80.0,20
-,,3,average,4, 20.0, 20.0,100.0,20
-,,2,below average,0,  0.0,  0.0,100.0,20
-,,1,poor,0,  0.0,  0.0,100.0,20
-,Overall_educational_experience,5,excellent,11, 55.0, 55.0, 55.0,20
-,,4,above average,7, 35.0, 35.0, 90.0,20
-,,3,average,2, 10.0, 10.0,100.0,20
-,,2,below average,0,  0.0,  0.0,100.0,20
-,,1,poor,0,  0.0,  0.0,100.0,20
-,"Technical_quality_(e.g.,_audio/visual_experience)",5,excellent,12, 60.0, 60.0, 60.0,20
-,,4,above average,4, 20.0, 20.0, 80.0,20
-,,3,average,4, 20.0, 20.0,100.0,20
-,,2,below average,0,  0.0,  0.0,100.0,20
-,,1,poor,0,  0.0,  0.0,100.0,20
-Learning_Objectives,Demonstrate_a_basic_understanding_of_how_to_apply_ADOS-2_codes,5,excellent,9, 45.0, 45.0, 45.0,20
-,,4,above average,7, 35.0, 35.0, 80.0,20
-,,3,average,4, 20.0, 20.0,100.0,20
-,,2,below average,0,  0.0,  0.0,100.0,20
-,,1,poor,0,  0.0,  0.0,100.0,20
-,Demonstrate_a_basic_understanding_of_how_to_score_ADOS-2_algorithms,5,excellent,9, 45.0, 45.0, 45.0,20
-,,4,above average,8, 40.0, 40.0, 85.0,20
-,,3,average,3, 15.0, 15.0,100.0,20
-,,2,below average,0,  0.0,  0.0,100.0,20
-,,1,poor,0,  0.0,  0.0,100.0,20
-,Explain_issues_in_the_clinical_application_of_ADOS-2_results,5,excellent,7, 35.0, 35.0, 35.0,20
-,,4,above average,9, 45.0, 45.0, 80.0,20
-,,3,average,3, 15.0, 15.0, 95.0,20
-,,2,below average,1,  5.0,  5.0,100.0,20
-,,1,poor,0,  0.0,  0.0,100.0,20
-,Identify_administration_procedures_for_the_ADOS-2,5,excellent,8, 40.0, 40.0, 40.0,20
-,,4,above average,10, 50.0, 50.0, 90.0,20
-,,3,average,2, 10.0, 10.0,100.0,20
-,,2,below average,0,  0.0,  0.0,100.0,20
-,,1,poor,0,  0.0,  0.0,100.0,20
-,Identify_the_basic_psychometric_support_for_the_ADOS-2,5,excellent,5, 25.0, 25.0, 25.0,20
-,,4,above average,11, 55.0, 55.0, 80.0,20
-,,3,average,4, 20.0, 20.0,100.0,20
-,,2,below average,0,  0.0,  0.0,100.0,20
-,,1,poor,0,  0.0,  0.0,100.0,20
-Learning_Self-Evaluation,How_much_did_you_learn_as_a_result_of_this_CE_program?,5,excellent,0,  0.0,  0.0,  0.0,20
-,,4,above average,0,  0.0,  0.0,  0.0,20
-,,3,average,3, 15.0, 15.0, 15.0,20
-,,2,below average,0,  0.0,  0.0, 15.0,20
-,,1,poor,0,  0.0,  0.0, 15.0,20
-,,,,17, 85.0, 85.0,100.0,20
-Quality_of_Instruction_–_Course_Features,"Demonstrations_(e.g.,_video-based_case_examples)",5,excellent,11, 55.0, 55.0, 55.0,20
-,,4,above average,8, 40.0, 40.0, 95.0,20
-,,3,average,1,  5.0,  5.0,100.0,20
-,,2,below average,0,  0.0,  0.0,100.0,20
-,,1,poor,0,  0.0,  0.0,100.0,20
-,"Interactive_content_(e.g.,_group_discussion_of_administration_and_coding)",5,excellent,10, 50.0, 50.0, 50.0,20
-,,4,above average,4, 20.0, 20.0, 70.0,20
-,,3,average,6, 30.0, 30.0,100.0,20
-,,2,below average,0,  0.0,  0.0,100.0,20
-,,1,poor,0,  0.0,  0.0,100.0,20
-,Lecture(s),5,excellent,11, 55.0, 55.0, 55.0,20
-,,4,above average,8, 40.0, 40.0, 95.0,20
-,,3,average,1,  5.0,  5.0,100.0,20
-,,2,below average,0,  0.0,  0.0,100.0,20
-,,1,poor,0,  0.0,  0.0,100.0,20
-,"Other_interactive_features_(e.g.,_polling,_chat/Q&A)",5,excellent,10, 50.0, 50.0, 50.0,20
-,,4,above average,4, 20.0, 20.0, 70.0,20
-,,3,average,6, 30.0, 30.0,100.0,20
-,,2,below average,0,  0.0,  0.0,100.0,20
-,,1,poor,0,  0.0,  0.0,100.0,20
-"Quality_of_Instruction_–_Instructor_Ratings_–_So_Hyun_“Sophy”_Kim,_PhD",Clarified_content_in_response_to_questions_from_participants,5,excellent,15, 75.0, 75.0, 75.0,20
-,,4,above average,5, 25.0, 25.0,100.0,20
-,,3,average,0,  0.0,  0.0,100.0,20
-,,2,below average,0,  0.0,  0.0,100.0,20
-,,1,poor,0,  0.0,  0.0,100.0,20
-,Knowledgeable_in_relevant_content_areas,5,excellent,14, 70.0, 70.0, 70.0,20
-,,4,above average,6, 30.0, 30.0,100.0,20
-,,3,average,0,  0.0,  0.0,100.0,20
-,,2,below average,0,  0.0,  0.0,100.0,20
-,,1,poor,0,  0.0,  0.0,100.0,20
-,Presented_content_consistent_with_the_learning_objectives,5,excellent,15, 75.0, 75.0, 75.0,20
-,,4,above average,5, 25.0, 25.0,100.0,20
-,,3,average,0,  0.0,  0.0,100.0,20
-,,2,below average,0,  0.0,  0.0,100.0,20
-,,1,poor,0,  0.0,  0.0,100.0,20
-,Presented_content_using_methods_appropriate_to_the_content,5,excellent,15, 75.0, 75.0, 75.0,20
-,,4,above average,5, 25.0, 25.0,100.0,20
-,,3,average,0,  0.0,  0.0,100.0,20
-,,2,below average,0,  0.0,  0.0,100.0,20
-,,1,poor,0,  0.0,  0.0,100.0,20
-,Provided_useful_historical_and_current_information_about_autism_spectrum_disorders,5,excellent,15, 75.0, 75.0, 75.0,20
-,,4,above average,5, 25.0, 25.0,100.0,20
-,,3,average,0,  0.0,  0.0,100.0,20
-,,2,below average,0,  0.0,  0.0,100.0,20
-,,1,poor,0,  0.0,  0.0,100.0,20
-"Quality_of_Instruction_–_Instructor_Ratings_–_Somer_Bishop,_PhD",Clarified_content_in_response_to_questions_from_participants,5,excellent,15, 75.0, 75.0, 75.0,20
-,,4,above average,5, 25.0, 25.0,100.0,20
-,,3,average,0,  0.0,  0.0,100.0,20
-,,2,below average,0,  0.0,  0.0,100.0,20
-,,1,poor,0,  0.0,  0.0,100.0,20
-,Knowledgeable_in_relevant_content_areas,5,excellent,14, 70.0, 70.0, 70.0,20
-,,4,above average,6, 30.0, 30.0,100.0,20
-,,3,average,0,  0.0,  0.0,100.0,20
-,,2,below average,0,  0.0,  0.0,100.0,20
-,,1,poor,0,  0.0,  0.0,100.0,20
-,Presented_content_consistent_with_the_learning_objectives,5,excellent,15, 75.0, 75.0, 75.0,20
-,,4,above average,5, 25.0, 25.0,100.0,20
-,,3,average,0,  0.0,  0.0,100.0,20
-,,2,below average,0,  0.0,  0.0,100.0,20
-,,1,poor,0,  0.0,  0.0,100.0,20
-,Presented_content_using_methods_appropriate_to_the_content,5,excellent,16, 80.0, 80.0, 80.0,20
-,,4,above average,4, 20.0, 20.0,100.0,20
-,,3,average,0,  0.0,  0.0,100.0,20
-,,2,below average,0,  0.0,  0.0,100.0,20
-,,1,poor,0,  0.0,  0.0,100.0,20
-,Provided_useful_historical_and_current_information_about_autism_spectrum_disorders,5,excellent,15, 75.0, 75.0, 75.0,20
-,,4,above average,5, 25.0, 25.0,100.0,20
-,,3,average,0,  0.0,  0.0,100.0,20
-,,2,below average,0,  0.0,  0.0,100.0,20
-,,1,poor,0,  0.0,  0.0,100.0,20
-Usefulness_of_Content,How_useful_was_the_content_of_this_CE_program_for_your_practice_or_other_professional_development?,5,excellent,0,  0.0,  0.0,  0.0,20
-,,4,above average,0,  0.0,  0.0,  0.0,20
-,,3,average,0,  0.0,  0.0,  0.0,20
-,,2,below average,0,  0.0,  0.0,  0.0,20
-,,1,poor,0,  0.0,  0.0,  0.0,20
-,,,,20,100.0,100.0,100.0,20
+item,value,label,freq,total_pct,valid_pct,valid_cum_pct,total
+How did you learn about this CE program?,7,Other (answer in next question),0,  0.0,  0.0,  0.0,34
+,6,Colleague,7, 20.6, 20.6, 20.6,34
+,5,Supervisor,11, 32.4, 32.4, 52.9,34
+,4,"Social media (e.g., Facebook)",0,  0.0,  0.0, 52.9,34
+,3,Direct email from WPS,6, 17.6, 17.6, 70.6,34
+,2,WPS catalog/print advertisement,0,  0.0,  0.0, 70.6,34
+,1,WPS website,10, 29.4, 29.4,100.0,34
+I certify that I am the person who attended the live webinar and completed this evaluation.,1,Yes,34,100.0,100.0,100.0,34
+"In general, what format do you prefer for webinars?",6,Blended instruction (live webinar combined with independent study),3,  8.8,  8.8,  8.8,34
+,5,Pre-recorded at own pace (no live instruction),3,  8.8,  8.8, 17.6,34
+,4,Multiday (full-days),15, 44.1, 44.1, 61.8,34
+,3,Multiday (half-days),3,  8.8,  8.8, 70.6,34
+,2,Single full-day (5–6 hours/day),6, 17.6, 17.6, 88.2,34
+,1,Single half-day (3–4 hours/day),4, 11.8, 11.8,100.0,34
+"In general, what time of day do you prefer to begin a live webinar?",3,Evening,0,  0.0,  0.0,  0.0,34
+,2,Afternoon,3,  8.8,  8.8,  8.8,34
+,1,Morning,31, 91.2, 91.2,100.0,34
+What is your field of work?,14,Other (answer in next question),1,  2.9,  2.9,  2.9,34
+,13,Speech–Language Pathology/Audiology,1,  2.9,  2.9,  5.9,34
+,12,Special Education,0,  0.0,  0.0,  5.9,34
+,11,Social Work,0,  0.0,  0.0,  5.9,34
+,10,School Psychology,20, 58.8, 58.8, 64.7,34
+,9,Psychiatry,0,  0.0,  0.0, 64.7,34
+,8,Physical Therapy,0,  0.0,  0.0, 64.7,34
+,7,Occupational Therapy,1,  2.9,  2.9, 67.6,34
+,6,Neuropsychology,0,  0.0,  0.0, 67.6,34
+,5,Medicine,0,  0.0,  0.0, 67.6,34
+,4,Educational Diagnostician/Psychometrist,0,  0.0,  0.0, 67.6,34
+,3,Counseling,0,  0.0,  0.0, 67.6,34
+,2,Clinical Psychology,9, 26.5, 26.5, 94.1,34
+,1,Applied Behavior Analysis (ABA; BABCP),2,  5.9,  5.9,100.0,34
+What is your highest academic degree?,5,No college degree,0,  0.0,  0.0,  0.0,34
+,4,Associates,0,  0.0,  0.0,  0.0,34
+,3,"Bachelor’s (BS, BA)",1,  2.9,  2.9,  2.9,34
+,2,"Master’s (MSW, MS, MA)",20, 58.8, 58.8, 61.8,34
+,1,Doctorate,13, 38.2, 38.2,100.0,34
+Would you recommend this CE program to others?,2,No,0,  0.0,  0.0,  0.0,34
+,1,Yes,34,100.0,100.0,100.0,34

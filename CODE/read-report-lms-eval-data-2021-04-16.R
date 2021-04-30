@@ -87,7 +87,7 @@ webinar_format <- tibble(
   item = rep(
     str_c(
       "In general, what format do you prefer ",
-      "for webinars? Choose all that apply:"
+      "for webinars?"
     ),
     6
   ),
@@ -101,6 +101,11 @@ webinar_format <- tibble(
     "Blended instruction (live webinar combined with independent study)"
   )
 )
+
+# (1 = Single half-day (3-4 hours/day, 2 = Single full-day (5-6 hours/day), 
+#                       3 = Multiday (half-days), 4 = Multiday (full-days), 
+#                       5 = Pre=recorded at own pace (no live instruction), 
+#                       6 = Blended instruction (live webinar combined with independent study))
 
 webinar_time <- tibble(
   item = rep("In general, what time of day do you prefer to begin a live webinar?",
@@ -289,7 +294,7 @@ write_csv(output,
           here("OUTPUT-FILES/lms-output-survey-ados2-workshop-2021-04-16.csv"),
           na = "")
 
-# create report for RAs that gives freq counts of responses by question
+# CREATE FREQ TABLE FOR SUPER-SUB QUESTIONS
 freq_table_super_sub_cols <- output %>% 
   # filter(`What is your field of work?` == "School Psychology") %>% 
   select(all_of(names(named_super_sub_r_cols))) %>%  
@@ -349,7 +354,8 @@ freq_table_super_sub_cols <- output %>%
       lag(sub_q) == sub_q  ~ NA_character_,
       TRUE ~ sub_q
     ),
-    across(c(total_pct, valid_pct, valid_cum_pct), ~ format(., digits = 1, nsmall = 1)) # format ensures pct will print with 2 digits right of decimal
+    # format ensures pct will print with 2 digits right of decimal
+    across(c(total_pct, valid_pct, valid_cum_pct), ~ format(., digits = 1, nsmall = 1)) 
   ) %>%
   select(super_q, sub_q, value, label, n, total_pct, valid_pct, valid_cum_pct, total) %>% 
   rename(freq = n) %>% 
@@ -370,7 +376,7 @@ freq_table_rhs_num_cols <- rhs_num_cols %>%
   # here only to get rid of garbage rows that account for cells where more than
   # one response was entered. The LMS output no longer permits multiple
   # responses to a single question.
-  filter(!is.na(value)) %>% 
+  # filter(!is.na(value)) %>% 
   replace_na(list(n = 0)) %>% 
   mutate(total = sum(n),
          total_pct = round(100*(n/total), 1),
@@ -384,18 +390,34 @@ freq_table_rhs_num_cols <- rhs_num_cols %>%
     item = case_when(
       lag(item) == item  ~ NA_character_,
       TRUE ~ item
-    ), across(c(total_pct, valid_pct, valid_cum_pct), ~ format(., digits = 1, nsmall = 1)) 
+    ), 
+    across(c(total_pct, valid_pct, valid_cum_pct), ~ format(., digits = 1, nsmall = 1)) 
     # format ensures pct will print with 1 digit right of decimal
   ) %>%
   select(item, value, label, n, total_pct, valid_pct, valid_cum_pct, total) %>% 
-  rename(freq = n) %>% 
-  mutate(across(item, ~ replace_na(., "")))
+  rename(super_q = item, freq = n) %>% 
+  mutate(across(super_q, ~ replace_na(., "")),
+         sub_q = NA_character_,
+         across(c(value, freq, total), ~ as.character(.))
+  ) %>% 
+  relocate(sub_q, .after = "super_q")
 
+# COMBINED FREQ TABLE, TEXT COLS IN SINGLE REPORT
 
+freq_table_all <- bind_rows(
+  freq_table_super_sub_cols,
+  freq_table_rhs_num_cols
+)
 
-# write_xlsx(
-#   list(school_psych = school_psych), 
-#   here("OUTPUT-FILES/school-psych-report.xlsx")
-# )
+text_cols_all <- bind_cols(
+  lhs_cols,
+  date_col,
+  rhs_text_cols
+)
+
+write_xlsx(
+  list(`text responses` = text_cols_all, `freq tables` = freq_table_all),
+  here("OUTPUT-FILES/lms-report-survey-ados2-workshop-2021-04-16.xlsx")
+)
 
 
