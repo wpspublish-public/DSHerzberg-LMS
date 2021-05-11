@@ -102,11 +102,6 @@ webinar_format <- tibble(
   )
 )
 
-# (1 = Single half-day (3-4 hours/day, 2 = Single full-day (5-6 hours/day), 
-#                       3 = Multiday (half-days), 4 = Multiday (full-days), 
-#                       5 = Pre=recorded at own pace (no live instruction), 
-#                       6 = Blended instruction (live webinar combined with independent study))
-
 webinar_time <- tibble(
   item = rep("In general, what time of day do you prefer to begin a live webinar?",
              3),

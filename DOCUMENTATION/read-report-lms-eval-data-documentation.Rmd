@@ -14,20 +14,20 @@ This is a method for reading in output from WPS LMS system, cleaning up and refo
 One of the key elements of processing is to handle columns that include super-ordinate questions, sub-ordinate questions, and responses. Here is an example of one such column:
 
 ```
-   `General Live Webinar Experience`                                                                   
+`Access/Setting/Overall Experience`                               
 
- Overall educational experience: 3, Accessibility of platforms/materials: 3, Technical quality (e.g.…
- Overall educational experience: 5, Accessibility of platforms/materials: 5, Technical quality (e.g.…
- Overall educational experience: 5, Accessibility of platforms/materials: 4, Technical quality (e.g.…
- Overall educational experience: 5, Accessibility of platforms/materials: 5, Technical quality (e.g.…
- Overall educational experience: 5, Accessibility of platforms/materials: 4, Technical quality (e.g.…
- Overall educational experience: 3, Accessibility of platforms/materials: 1, Technical quality (e.g.…
- Overall educational experience: 5, Accessibility of platforms/materials: 5, Technical quality (e.g.…
- Overall educational experience: 5, Accessibility of platforms/materials: 5, Technical quality (e.g.…
- Overall educational experience: 5, Accessibility of platforms/materials: 5, Technical quality (e.g.…
-Overall educational experience: 5, Accessibility of platforms/materials: 5, Technical quality (e.g.…
+Overall educational experience: 5 | Excellent, Accessibility of platforms/materi…
+Overall educational experience: 4 | Above average, Accessibility of platforms/ma…
+Overall educational experience: 5 | Excellent, Accessibility of platforms/materi…
+Overall educational experience: 5 | Excellent, Accessibility of platforms/materi…
+Overall educational experience: 5 | Excellent, Accessibility of platforms/materi…
+Overall educational experience: 5 | Excellent, Accessibility of platforms/materi…
+Overall educational experience: 5 | Excellent, Accessibility of platforms/materi…
+Overall educational experience: 4 | Above average, Accessibility of platforms/ma…
+Overall educational experience: 3 | Average, Accessibility of platforms/material…
+Overall educational experience: 5 | Excellent, Accessibility of platforms/materi…
 ```
-The column name, `General Live Webinar Experience` is a super-ordinate question. The row values going down the column contain both the sub-ordinate questions (e.g., `Overall educational experience`, `Accessibility of platforms/materials`, etc.), and the numerical responses to those sub-ordinate questions. This represents a classic "untidy" data input, and this code cleans it up by creating separate columns for each super- and sub-ordinate question pair, with the rows containing numerical responses by person.
+The column name, `Access/Setting/Overall Experience` is a super-ordinate question. The row values going down the column contain the sub-ordinate questions (e.g., `Overall educational experience`, `Accessibility of platforms/materials`, etc.), the numerical responses to those sub-ordinate questions, and the text label corresponding to each numerical response (e.g., `5 | Excellent`. This represents a classic "untidy" data input, and this code cleans it up by creating separate columns for each super- and sub-ordinate question pair, with the rows containing _only_ the numerical responses by person (thus omitting the text labels).
 
 ###### RUNNABLE CODE
 ```{r script, eval = FALSE}
@@ -61,7 +61,33 @@ token_split_destination_cols <- c("q1", "r1", "q2", "r2", "q3", "r3", "q4", "r4"
 token_split_regex <- ":|(?<=[[:digit:]]),"
 
 df_super_sub_cols <- input %>% 
-  select(all_of(token_super_sub_first_col):all_of(token_super_sub_last_col))
+  select(all_of(token_super_sub_first_col):all_of(token_super_sub_last_col)) %>% 
+  mutate(across(everything(),
+                ~ str_replace_all(
+                  .,
+                  c(
+                    " [|] Excellent" = "",
+                    " [|] Above average" = "",
+                    " [|] Average" = "",
+                    " [|] Below average" = "",
+                    " [|] Poor" = "",
+                    " [|] Strongly agree" = "",
+                    " [|] Agree" = "",
+                    " [|] Neutral" = "",
+                    " [|] Disagree" = "",
+                    " [|] Strongly disagree" = "",
+                    " [|] Extremely useful" = "",
+                    " [|] A good deal useful" = "",
+                    " [|] Somewhat useful" = "",
+                    " [|] A little useful" = "",
+                    " [|] Not useful" = "",
+                    " [|] A great deal" = "",
+                    " [|] More than average" = "",
+                    " [|] Average" = "",
+                    " [|] Less than average" = "",
+                    " [|] Very little" = ""
+                  )
+                )))
 
 date_col <- input %>% 
   select(Completed) %>% 
@@ -209,6 +235,6 @@ We now use these tokens to segregate and process blocks of columns for downstrea
 
 * Within `dplyr::select()`, we can use tokens (e.g., `token_super_sub_first_col`, `token_super_sub_last_col`) to designate the first and last columns in a block. Because these tokens are character vectors, within `select()` we need to wrap them in the tidyselect helper `all_of()`.
 * We transform completion dates in the `Completed` column into a standard UTC format with `lubridate::mdy_hm()`, using the version of this function that matches the input format of the dates. We use `dplyr::transmute()` for this operation, because it discards the input column as it creates the new, properly formatted `Completed` column.
-* Some of the input columns are logical vectors, a format that is not needed in the output. We transform these columns to character type with `mutate(across(where(is.logical), as.character))`.
-```{r script, echo = 30:47, eval = FALSE}
+* Some of the input columns are logical vectors, a format that is not needed in the output. We transform these columns to character type with `mutate(across(where(is.logical), as.character))`. Here, `dplyr::across()` is used to identify the columns to be passed to `base::as.character`. When those columns are defined by a predicate function (e.g., `base::is.logical()`), that function must be wrapped in `tidyselect::where()`, which returns all columns for which predicate function returns `TRUE`.
+```{r script, echo = 30:71, eval = FALSE}
 ```

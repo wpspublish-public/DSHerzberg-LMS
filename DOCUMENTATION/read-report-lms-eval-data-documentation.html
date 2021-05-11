@@ -172,19 +172,19 @@ pre code {
 <h4>Overview</h4>
 <p>This is a method for reading in output from WPS LMS system, cleaning up and reformatting the data, and producing a report of frequency counts for the course evaluations.</p>
 <p>One of the key elements of processing is to handle columns that include super-ordinate questions, sub-ordinate questions, and responses. Here is an example of one such column:</p>
-<pre><code>   `General Live Webinar Experience`                                                                   
+<pre><code>`Access/Setting/Overall Experience`                               
 
- Overall educational experience: 3, Accessibility of platforms/materials: 3, Technical quality (e.g.…
- Overall educational experience: 5, Accessibility of platforms/materials: 5, Technical quality (e.g.…
- Overall educational experience: 5, Accessibility of platforms/materials: 4, Technical quality (e.g.…
- Overall educational experience: 5, Accessibility of platforms/materials: 5, Technical quality (e.g.…
- Overall educational experience: 5, Accessibility of platforms/materials: 4, Technical quality (e.g.…
- Overall educational experience: 3, Accessibility of platforms/materials: 1, Technical quality (e.g.…
- Overall educational experience: 5, Accessibility of platforms/materials: 5, Technical quality (e.g.…
- Overall educational experience: 5, Accessibility of platforms/materials: 5, Technical quality (e.g.…
- Overall educational experience: 5, Accessibility of platforms/materials: 5, Technical quality (e.g.…
-Overall educational experience: 5, Accessibility of platforms/materials: 5, Technical quality (e.g.…</code></pre>
-<p>The column name, <code>General Live Webinar Experience</code> is a super-ordinate question. The row values going down the column contain both the sub-ordinate questions (e.g., <code>Overall educational experience</code>, <code>Accessibility of platforms/materials</code>, etc.), and the numerical responses to those sub-ordinate questions. This represents a classic “untidy” data input, and this code cleans it up by creating separate columns for each super- and sub-ordinate question pair, with the rows containing numerical responses by person.</p>
+Overall educational experience: 5 | Excellent, Accessibility of platforms/materi…
+Overall educational experience: 4 | Above average, Accessibility of platforms/ma…
+Overall educational experience: 5 | Excellent, Accessibility of platforms/materi…
+Overall educational experience: 5 | Excellent, Accessibility of platforms/materi…
+Overall educational experience: 5 | Excellent, Accessibility of platforms/materi…
+Overall educational experience: 5 | Excellent, Accessibility of platforms/materi…
+Overall educational experience: 5 | Excellent, Accessibility of platforms/materi…
+Overall educational experience: 4 | Above average, Accessibility of platforms/ma…
+Overall educational experience: 3 | Average, Accessibility of platforms/material…
+Overall educational experience: 5 | Excellent, Accessibility of platforms/materi…</code></pre>
+<p>The column name, <code>Access/Setting/Overall Experience</code> is a super-ordinate question. The row values going down the column contain the sub-ordinate questions (e.g., <code>Overall educational experience</code>, <code>Accessibility of platforms/materials</code>, etc.), the numerical responses to those sub-ordinate questions, and the text label corresponding to each numerical response (e.g., <code>5 | Excellent</code>. This represents a classic “untidy” data input, and this code cleans it up by creating separate columns for each super- and sub-ordinate question pair, with the rows containing <em>only</em> the numerical responses by person (thus omitting the text labels).</p>
 <div id="runnable-code" class="section level6">
 <h6>RUNNABLE CODE</h6>
 <pre class="r"><code>suppressMessages(library(here))
@@ -217,7 +217,33 @@ token_split_destination_cols &lt;- c(&quot;q1&quot;, &quot;r1&quot;, &quot;q2&qu
 token_split_regex &lt;- &quot;:|(?&lt;=[[:digit:]]),&quot;
 
 df_super_sub_cols &lt;- input %&gt;% 
-  select(all_of(token_super_sub_first_col):all_of(token_super_sub_last_col))
+  select(all_of(token_super_sub_first_col):all_of(token_super_sub_last_col)) %&gt;% 
+  mutate(across(everything(),
+                ~ str_replace_all(
+                  .,
+                  c(
+                    &quot; [|] Excellent&quot; = &quot;&quot;,
+                    &quot; [|] Above average&quot; = &quot;&quot;,
+                    &quot; [|] Average&quot; = &quot;&quot;,
+                    &quot; [|] Below average&quot; = &quot;&quot;,
+                    &quot; [|] Poor&quot; = &quot;&quot;,
+                    &quot; [|] Strongly agree&quot; = &quot;&quot;,
+                    &quot; [|] Agree&quot; = &quot;&quot;,
+                    &quot; [|] Neutral&quot; = &quot;&quot;,
+                    &quot; [|] Disagree&quot; = &quot;&quot;,
+                    &quot; [|] Strongly disagree&quot; = &quot;&quot;,
+                    &quot; [|] Extremely useful&quot; = &quot;&quot;,
+                    &quot; [|] A good deal useful&quot; = &quot;&quot;,
+                    &quot; [|] Somewhat useful&quot; = &quot;&quot;,
+                    &quot; [|] A little useful&quot; = &quot;&quot;,
+                    &quot; [|] Not useful&quot; = &quot;&quot;,
+                    &quot; [|] A great deal&quot; = &quot;&quot;,
+                    &quot; [|] More than average&quot; = &quot;&quot;,
+                    &quot; [|] Average&quot; = &quot;&quot;,
+                    &quot; [|] Less than average&quot; = &quot;&quot;,
+                    &quot; [|] Very little&quot; = &quot;&quot;
+                  )
+                )))
 
 date_col &lt;- input %&gt;% 
   select(Completed) %&gt;% 
@@ -394,10 +420,36 @@ token_split_regex &lt;- &quot;:|(?&lt;=[[:digit:]]),&quot;</code></pre>
 <ul>
 <li>Within <code>dplyr::select()</code>, we can use tokens (e.g., <code>token_super_sub_first_col</code>, <code>token_super_sub_last_col</code>) to designate the first and last columns in a block. Because these tokens are character vectors, within <code>select()</code> we need to wrap them in the tidyselect helper <code>all_of()</code>.</li>
 <li>We transform completion dates in the <code>Completed</code> column into a standard UTC format with <code>lubridate::mdy_hm()</code>, using the version of this function that matches the input format of the dates. We use <code>dplyr::transmute()</code> for this operation, because it discards the input column as it creates the new, properly formatted <code>Completed</code> column.</li>
-<li>Some of the input columns are logical vectors, a format that is not needed in the output. We transform these columns to character type with <code>mutate(across(where(is.logical), as.character))</code>.</li>
+<li>Some of the input columns are logical vectors, a format that is not needed in the output. We transform these columns to character type with <code>mutate(across(where(is.logical), as.character))</code>. Here, <code>dplyr::across()</code> is used to identify the columns to be passed to <code>base::as.character</code>. When those columns are defined by a predicate function (e.g., <code>base::is.logical()</code>), that function must be wrapped in <code>tidyselect::where()</code>, which returns all columns for which predicate function returns <code>TRUE</code>.</li>
 </ul>
 <pre class="r"><code>df_super_sub_cols &lt;- input %&gt;% 
-  select(all_of(token_super_sub_first_col):all_of(token_super_sub_last_col))
+  select(all_of(token_super_sub_first_col):all_of(token_super_sub_last_col)) %&gt;% 
+  mutate(across(everything(),
+                ~ str_replace_all(
+                  .,
+                  c(
+                    &quot; [|] Excellent&quot; = &quot;&quot;,
+                    &quot; [|] Above average&quot; = &quot;&quot;,
+                    &quot; [|] Average&quot; = &quot;&quot;,
+                    &quot; [|] Below average&quot; = &quot;&quot;,
+                    &quot; [|] Poor&quot; = &quot;&quot;,
+                    &quot; [|] Strongly agree&quot; = &quot;&quot;,
+                    &quot; [|] Agree&quot; = &quot;&quot;,
+                    &quot; [|] Neutral&quot; = &quot;&quot;,
+                    &quot; [|] Disagree&quot; = &quot;&quot;,
+                    &quot; [|] Strongly disagree&quot; = &quot;&quot;,
+                    &quot; [|] Extremely useful&quot; = &quot;&quot;,
+                    &quot; [|] A good deal useful&quot; = &quot;&quot;,
+                    &quot; [|] Somewhat useful&quot; = &quot;&quot;,
+                    &quot; [|] A little useful&quot; = &quot;&quot;,
+                    &quot; [|] Not useful&quot; = &quot;&quot;,
+                    &quot; [|] A great deal&quot; = &quot;&quot;,
+                    &quot; [|] More than average&quot; = &quot;&quot;,
+                    &quot; [|] Average&quot; = &quot;&quot;,
+                    &quot; [|] Less than average&quot; = &quot;&quot;,
+                    &quot; [|] Very little&quot; = &quot;&quot;
+                  )
+                )))
 
 date_col &lt;- input %&gt;% 
   select(Completed) %&gt;% 
@@ -411,9 +463,7 @@ rhs_num_cols &lt;- input %&gt;%
   select(all_of(token_addl_cols_for_freq_counts))
 
 rhs_text_cols &lt;- input %&gt;% 
-  select(all_of(token_rhs_text_cols))
-
-q_name &lt;- str_c(str_replace_all(names(df_super_sub_cols), &quot; &quot;, &quot;_&quot;), &quot;:&quot;)</code></pre>
+  select(all_of(token_rhs_text_cols))</code></pre>
 </div>
 </div>
 
