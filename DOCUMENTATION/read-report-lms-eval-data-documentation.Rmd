@@ -11,7 +11,7 @@ knitr::opts_chunk$set(echo = TRUE, warning = FALSE, message = FALSE)
 
 This is a method for reading in output from WPS LMS system, cleaning up and reformatting the data, and producing a report of frequency counts for the course evaluations.
 
-One of the key elements of processing is to handle columns that include super-ordinate questions, sub-ordinate questions, and responses. Here is an example of one such column:
+A key element of cleanup is handling columns that contain super-ordinate questions, sub-ordinate questions, and responses. Here is an example of one such column:
 
 ```
 `Access/Setting/Overall Experience`                               
@@ -27,10 +27,12 @@ Overall educational experience: 4 | Above average, Accessibility of platforms/ma
 Overall educational experience: 3 | Average, Accessibility of platforms/material…
 Overall educational experience: 5 | Excellent, Accessibility of platforms/materi…
 ```
-The column name, `Access/Setting/Overall Experience` is a super-ordinate question. The row values going down the column contain the sub-ordinate questions (e.g., `Overall educational experience`, `Accessibility of platforms/materials`, etc.), the numerical responses to those sub-ordinate questions, and the text label corresponding to each numerical response (e.g., `5 | Excellent`. This represents a classic "untidy" data input, and this code cleans it up by creating separate columns for each super- and sub-ordinate question pair, with the rows containing _only_ the numerical responses by person (thus omitting the text labels).
+The column name, `Access/Setting/Overall Experience` is a super-ordinate question. Going down the column, the cells contain the sub-ordinate questions (e.g., `Overall educational experience`, `Accessibility of platforms/materials`, etc.), the numerical responses to those sub-ordinate questions, and the text labels corresponding to each numerical response (e.g., `5 | Excellent`. This represents a classic "untidy" data input. The cleanup process creates separate columns for each super- and sub-ordinate question pair, with the rows containing _only_ the numerical responses by person (i.e, without the text labels in the input).
+
+#### Data preparation and cleanup
 
 ###### RUNNABLE CODE
-```{r script, eval = FALSE}
+```{r prep, eval = FALSE}
 suppressMessages(library(here))
 suppressMessages(suppressWarnings(library(tidyverse)))
 suppressMessages(library(xlsx))
@@ -103,6 +105,171 @@ rhs_num_cols <- input %>%
 rhs_text_cols <- input %>% 
   select(all_of(token_rhs_text_cols))
 
+recommend_CE <- tibble(
+  item = rep("Would you recommend this CE program to others?", 2),
+  value = 1:2,
+  label = c("Yes", "No")
+)
+
+webinar_format <- tibble(
+  item = rep(
+    str_c(
+      "In general, what format do you prefer ",
+      "for webinars?"
+    ),
+    6
+  ),
+  value = 1:6,
+  label = c(
+    "Single half-day (3–4 hours/day)",
+    "Single full-day (5–6 hours/day)",
+    "Multiday (half-days)",
+    "Multiday (full-days)",
+    "Pre-recorded at own pace (no live instruction)",
+    "Blended instruction (live webinar combined with independent study)"
+  )
+)
+
+webinar_time <- tibble(
+  item = rep("In general, what time of day do you prefer to begin a live webinar?",
+             3),
+  value = 1:3,
+  label = c("Morning",
+            "Afternoon",
+            "Evening")
+)
+
+learn_CE <- tibble(
+  item = rep("How did you learn about this CE program?",
+             7),
+  value = 1:7,
+  label = c(
+    "WPS website",
+    "WPS catalog/print advertisement",
+    "Direct email from WPS",
+    "Social media (e.g., Facebook)",
+    "Supervisor",
+    "Colleague",
+    "Other (answer in next question)"
+  )
+)
+
+highest_degree <- tibble(
+  item = rep("What is your highest academic degree?",
+             5),
+  value = 1:5,
+  label = c(
+    "Doctorate",
+    "Master’s (MSW, MS, MA)",
+    "Bachelor’s (BS, BA)",
+    "Associates",
+    "No college degree"
+  )
+)
+
+field_work <- tibble(
+  item = rep("What is your field of work?",
+             14),
+  value = 1:14,
+  label = c(
+    "Applied Behavior Analysis (ABA; BABCP)",
+    "Clinical Psychology",
+    "Counseling",
+    "Educational Diagnostician/Psychometrist",
+    "Medicine",
+    "Neuropsychology",
+    "Occupational Therapy",
+    "Physical Therapy",
+    "Psychiatry",
+    "School Psychology",
+    "Social Work",
+    "Special Education",
+    "Speech–Language Pathology/Audiology",
+    "Other (answer in next question)"
+  )
+)
+
+certify_attend <- tibble(
+  item =
+    str_c(
+      "I certify that I am the person who attended ",
+      "the live webinar and completed this evaluation."
+    ),
+  value = 1,
+  label = "Yes"
+)
+
+item_value_label_map <- bind_rows(
+  recommend_CE,
+  webinar_format,
+  webinar_time,
+  learn_CE,
+  highest_degree,
+  field_work,
+  certify_attend
+)
+```
+
+<br>
+
+###### COMMENTED SNIPPETS
+Load libraries and read input data.
+```{r prep, echo = 1:8, eval = FALSE}
+```
+Initialize tokens representing job-specific elements. These tokens are of three types:
+
+* Tokens that allow subsequent code to segregate blocks of contiguous columns. These tokens either identify the boundary columns of these contiguous blocks (e.g, `token_super_sub_first_col`), or they contain the names of all of the columns in a block (e.g., `token_lhs_intact_cols`).
+* `token_split_destination_cols`, which holds the names of interim destination columns for the super/sub-ordinate question text (names contain `q`) and numerical responses (names contain `r`). The token is a character vector containing the destination column names in question-response pairs (e.g., `c("q1", "r1", "q2", "r2", "q3", "r3", "q4", "r4", "q5", "r5")`). 
+   + This vector should be set up to contain as many pairs as are required by the super-ordinate question that contains the MOST subordinate questions. 
+   + Super-ordinate questions with fewer subordinate questions are handled automatically by the code.
+* `token_split_regex`, which holds the regular expression (here `":|(?<=[[:digit:]]),"`) that allows R to segregate the question text and numerical responses within each cell, so that these components can be sent to separate destination columns.
+   + A _regular expression_ describes a text element to search for and match in data. In R, regular expressions are written as strings enclosed in double quotes.
+   + `:|(?<=[[:digit:]]),` contains two elements separated by `|`, meaning that it will match _either_ element.The LHS element is a colon `:`.
+   + The RHS contains two parts: an expression `<=[[:digit:]]` enclosed in specialized parentheses `(?...)`, and a comma `,`. The comma is the character to match, and the specialized parenthetic expression denotes a _look-around_, which defines a position where the comma must appear in order to yield a match.
+     + Within the specialized parentheses, we have `[[:digit:]]`, a character class that matches any digit from `0` to `9`. To its left is `<=`, which in this context is the "preceded by" look-around operator.
+     + Thus, `(?<=[[:digit:]])` is an instruction to look for a match to the right of a digit. Importantly, however, it does not, itself, match any text. It rather identifies a location to search.
+  + Taken as a whole, then, `":|(?<=[[:digit:]]),"` tells R to match _either_ a colon `:` _or_ a comma immediately preceded by a digit (i.e., in `3,`, R matches the `,`, but not the `3`). By matching only commas preceded by digits, we avoid matching other commas that may exist within a string that constitutes the text of a question.
+  + Earlier, we provided an example of cells containing a mixture of question text and numerical responses (e.g., `Overall educational experience: 5 | Excellent, Accessibility of platforms/materi…`). Note that the regular expression in `token_split_regex` is set up to match the two characters, `:` and `,`, that mark the boundaries between question text and numerical responses. And, as noted above, we match only the commas that are located in boundary positions, not commas that may be located within the contiguous text of a question.
+```{r prep, echo = 10:28, eval = FALSE}
+```
+We now use these tokens to segregate and process blocks of columns for downstream processing. Some details to note:
+
+* Within `dplyr::select()`, we can use tokens (e.g., `token_super_sub_first_col`, `token_super_sub_last_col`) to designate the first and last columns in a block. Because these tokens are character vectors, we need to wrap them in the tidyselect helper `all_of()` when we pass them to a `dplyr` selecting function.
+* For data cleanup, we prefer elegant, generalizeable solutions, but for expediency's sake we sometimes make do with hard-coded work-arounds. The snippet below contains an example of such a work-around; we use `stringr::str_replace_all()` to strip out all different versions of the unneeded value labels for the sub-ordinate question numerical responses. These versions are stated explicitly in the code, a classic, non-generalizable, hard-coded solution. The desired recoding (or stripping, in which we replace a certain pattern with `""`) can be passed to `str_replace_all()` in the form of a vector of pattern-replacement pairs (e.g, `" [|] Excellent" = ""`).
+* Note how, within `str_replace_all()`, the vertical pipe character is enclosed in straight brackets (e.g., `[|]`). Because the vertical pipe is a reserved character in R, it must be "escaped" when it is part of a search string in a text-replacement procedure. It turns out that enclosure in straight brackets is the most reliable way to "escape" the vertical pipe.
+* We transform completion dates in the `Completed` column into a standard UTC format with `lubridate::mdy_hm()`, using the version of this function that matches the input format of the dates. We use `dplyr::transmute()` for this operation, because it discards the input column as it creates the new, properly formatted `Completed` column.
+* Some of the input columns are logical vectors, a format that is not needed in the output. We transform these columns to character type with `mutate(across(where(is.logical), as.character))`. Here, `dplyr::across()` is used to identify the columns to be passed to `base::as.character`. When those columns are defined by a predicate function (e.g., `base::is.logical()`), that function must be wrapped in `tidyselect::where()`, which returns all columns for which predicate function returns `TRUE`.
+```{r prep, echo = 30:71, eval = FALSE}
+```
+The columns designated by `token_addl_cols_for_freq_counts` are questions that each have a unique, finite set of numerically coded response choices. In the raw input, the cells of these columns contain the text value labels for these response choices, instead of the numerical codes needed for the output. Because each question has its own response options, the recoding instructions must be hard-coded into the script, as a lookup table that can be used downstream to replace text value labels with numerical codes.
+
+To create the required lookup table, we use `tibble::tibble()` to initialize new data frames, one for each of the columns designated by `token_addl_cols_for_freq_counts`. Each new data frame has one row for each possible numerical response choice to that question (thus the data frames have differing lengths). All data frames have the same three columns:
+
+* `item`: The question, as a string (e.g., `"Would you recommend this CE program to others?"`). We use `base::rep()` to repeat the string in each cell of the `item` column;
+* `value`: a vector of integers expressing the range of numerical response choices (e.g., `1:2`);
+* `label`: a character vector holding the value labels associated with each response choice (e.g., `c("Yes", "No")`).
+
+The next snippet shows the procedure for generating the first two (`recommend_CE`, `webinar_format`) of these new data frames. 
+```{r prep, echo = 73:96, eval = FALSE}
+```
+As a further example, we can examine `recommend_CE`:
+```
+item                                           value label
+
+Would you recommend this CE program to others?     1 Yes  
+Would you recommend this CE program to others?     2 No   
+```
+To create the lookup table required for downstream processing, we combine the new data frames into a single data frame `item_value_label_map`, stacking them one on top of the other with `dplyr::bind_rows()`.
+```{r prep, echo = 167:176, eval = FALSE}
+```
+
+<br>
+
+#### Generate frequency table output
+
+###### RUNNABLE CODE
+
+```{r freq, eval = FALSE}
 q_name <- str_c(str_replace_all(names(df_super_sub_cols), " ", "_"), ":")
 
 list_super_sub_cols <- map(
@@ -207,34 +374,4 @@ school_psych <- output %>%
     row.names = FALSE,
     append = FALSE
   )
-```
-
-<br>
-
-###### COMMENTED SNIPPETS
-Load libraries and read input data.
-```{r script, echo = 1:8, eval = FALSE}
-```
-Initialize tokens representing job-specific elements. These tokens are of three types:
-
-* Tokens that allow subsequent code to segregate blocks of contiguous columns. These tokens either identify the boundary columns of these contiguous blocks (e.g, `token_super_sub_first_col`), or they contain the names of all of the columns in a block (e.g., `token_lhs_intact_cols`).
-* `token_split_destination_cols`, which holds the names of interim destination columns for the super/sub-ordinate question text (names contain `q`) and numerical responses (names contain `r`). The token is a character vector containing the destination column names in question-response pairs (e.g., `c("q1", "r1", "q2", "r2", "q3", "r3", "q4", "r4", "q5", "r5")`). 
-   + This vector should be set up to contain as many pairs as are required by the super-ordinate question that contains the MOST subordinate questions. 
-   + Super-ordinate questions with fewer subordinate questions are handled automatically by the code.
-* `token_split_regex`, which contains the regular expression (here `":|(?<=[[:digit:]]),"`) that allows R to segregate the question text and numerical responses within each cell, so that these components can be sent to separate destination columns.
-   + A _regular expression_ describes a text element to search for and match in data. In R, regular expressions are written as strings enclosed in double quotes.
-   + `:|(?<=[[:digit:]]),` contains two elements separated by `|`, meaning that it will match _either_ element.The LHS element is a colon `:`.
-   + The RHS contains two parts: an expression `<=[[:digit:]]` enclosed in specialized parentheses `(?...)`, and a comma `,`. The comma is the character to match, and the specialized parenthetic expression denotes a _look-around_, which defines a position where the comma must appear in order to yield a match.
-     + Within the specialized parentheses, we have `[[:digit:]]`, a character class that matches any digit from `0` to `9`. To its left is `<=`, which in this context is the "preceded by" look-around operator.
-     + Thus, `(?<=[[:digit:]])` is an instruction to look for a match to the right of a digit. Importantly, however, it does not, itself, match any text. It rather identifies a location to search.
-  + Taken as a whole, then, `":|(?<=[[:digit:]]),"` tells R to match _either_ a colon `:` _or_ a comma immediately preceded by a digit (i.e., in `3,`, R matches the `,`, but not the `3`). By matching only commas preceded by digits, we avoid matching other commas that may exist within a string that constitutes the text of a question.
-  + Earlier, we provided an example of cells containing a mixture of question text and numerical responses (e.g., `Overall educational experience: 3, Accessibility of...`). Note that the regular expression in `token_split_regex` is set up to match the two characters, `:` and `,`, that mark the boundaries between question text and numerical responses. And, as noted above, we match only the commas that are located in boundary positions, not commas that may be located within the text of a question.
-```{r script, echo = 10:28, eval = FALSE}
-```
-We now use these tokens to segregate and process blocks of columns for downstream processing. Some details to note:
-
-* Within `dplyr::select()`, we can use tokens (e.g., `token_super_sub_first_col`, `token_super_sub_last_col`) to designate the first and last columns in a block. Because these tokens are character vectors, within `select()` we need to wrap them in the tidyselect helper `all_of()`.
-* We transform completion dates in the `Completed` column into a standard UTC format with `lubridate::mdy_hm()`, using the version of this function that matches the input format of the dates. We use `dplyr::transmute()` for this operation, because it discards the input column as it creates the new, properly formatted `Completed` column.
-* Some of the input columns are logical vectors, a format that is not needed in the output. We transform these columns to character type with `mutate(across(where(is.logical), as.character))`. Here, `dplyr::across()` is used to identify the columns to be passed to `base::as.character`. When those columns are defined by a predicate function (e.g., `base::is.logical()`), that function must be wrapped in `tidyselect::where()`, which returns all columns for which predicate function returns `TRUE`.
-```{r script, echo = 30:71, eval = FALSE}
 ```

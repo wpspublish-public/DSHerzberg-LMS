@@ -171,7 +171,7 @@ pre code {
 <div id="overview" class="section level4">
 <h4>Overview</h4>
 <p>This is a method for reading in output from WPS LMS system, cleaning up and reformatting the data, and producing a report of frequency counts for the course evaluations.</p>
-<p>One of the key elements of processing is to handle columns that include super-ordinate questions, sub-ordinate questions, and responses. Here is an example of one such column:</p>
+<p>A key element of cleanup is handling columns that contain super-ordinate questions, sub-ordinate questions, and responses. Here is an example of one such column:</p>
 <pre><code>`Access/Setting/Overall Experience`                               
 
 Overall educational experience: 5 | Excellent, Accessibility of platforms/materi…
@@ -184,7 +184,10 @@ Overall educational experience: 5 | Excellent, Accessibility of platforms/materi
 Overall educational experience: 4 | Above average, Accessibility of platforms/ma…
 Overall educational experience: 3 | Average, Accessibility of platforms/material…
 Overall educational experience: 5 | Excellent, Accessibility of platforms/materi…</code></pre>
-<p>The column name, <code>Access/Setting/Overall Experience</code> is a super-ordinate question. The row values going down the column contain the sub-ordinate questions (e.g., <code>Overall educational experience</code>, <code>Accessibility of platforms/materials</code>, etc.), the numerical responses to those sub-ordinate questions, and the text label corresponding to each numerical response (e.g., <code>5 | Excellent</code>. This represents a classic “untidy” data input, and this code cleans it up by creating separate columns for each super- and sub-ordinate question pair, with the rows containing <em>only</em> the numerical responses by person (thus omitting the text labels).</p>
+<p>The column name, <code>Access/Setting/Overall Experience</code> is a super-ordinate question. Going down the column, the cells contain the sub-ordinate questions (e.g., <code>Overall educational experience</code>, <code>Accessibility of platforms/materials</code>, etc.), the numerical responses to those sub-ordinate questions, and the text labels corresponding to each numerical response (e.g., <code>5 | Excellent</code>. This represents a classic “untidy” data input. The cleanup process creates separate columns for each super- and sub-ordinate question pair, with the rows containing <em>only</em> the numerical responses by person (i.e, without the text labels in the input).</p>
+</div>
+<div id="data-preparation-and-cleanup" class="section level4">
+<h4>Data preparation and cleanup</h4>
 <div id="runnable-code" class="section level6">
 <h6>RUNNABLE CODE</h6>
 <pre class="r"><code>suppressMessages(library(here))
@@ -259,7 +262,268 @@ rhs_num_cols &lt;- input %&gt;%
 rhs_text_cols &lt;- input %&gt;% 
   select(all_of(token_rhs_text_cols))
 
-q_name &lt;- str_c(str_replace_all(names(df_super_sub_cols), &quot; &quot;, &quot;_&quot;), &quot;:&quot;)
+recommend_CE &lt;- tibble(
+  item = rep(&quot;Would you recommend this CE program to others?&quot;, 2),
+  value = 1:2,
+  label = c(&quot;Yes&quot;, &quot;No&quot;)
+)
+
+webinar_format &lt;- tibble(
+  item = rep(
+    str_c(
+      &quot;In general, what format do you prefer &quot;,
+      &quot;for webinars?&quot;
+    ),
+    6
+  ),
+  value = 1:6,
+  label = c(
+    &quot;Single half-day (3–4 hours/day)&quot;,
+    &quot;Single full-day (5–6 hours/day)&quot;,
+    &quot;Multiday (half-days)&quot;,
+    &quot;Multiday (full-days)&quot;,
+    &quot;Pre-recorded at own pace (no live instruction)&quot;,
+    &quot;Blended instruction (live webinar combined with independent study)&quot;
+  )
+)
+
+webinar_time &lt;- tibble(
+  item = rep(&quot;In general, what time of day do you prefer to begin a live webinar?&quot;,
+             3),
+  value = 1:3,
+  label = c(&quot;Morning&quot;,
+            &quot;Afternoon&quot;,
+            &quot;Evening&quot;)
+)
+
+learn_CE &lt;- tibble(
+  item = rep(&quot;How did you learn about this CE program?&quot;,
+             7),
+  value = 1:7,
+  label = c(
+    &quot;WPS website&quot;,
+    &quot;WPS catalog/print advertisement&quot;,
+    &quot;Direct email from WPS&quot;,
+    &quot;Social media (e.g., Facebook)&quot;,
+    &quot;Supervisor&quot;,
+    &quot;Colleague&quot;,
+    &quot;Other (answer in next question)&quot;
+  )
+)
+
+highest_degree &lt;- tibble(
+  item = rep(&quot;What is your highest academic degree?&quot;,
+             5),
+  value = 1:5,
+  label = c(
+    &quot;Doctorate&quot;,
+    &quot;Master’s (MSW, MS, MA)&quot;,
+    &quot;Bachelor’s (BS, BA)&quot;,
+    &quot;Associates&quot;,
+    &quot;No college degree&quot;
+  )
+)
+
+field_work &lt;- tibble(
+  item = rep(&quot;What is your field of work?&quot;,
+             14),
+  value = 1:14,
+  label = c(
+    &quot;Applied Behavior Analysis (ABA; BABCP)&quot;,
+    &quot;Clinical Psychology&quot;,
+    &quot;Counseling&quot;,
+    &quot;Educational Diagnostician/Psychometrist&quot;,
+    &quot;Medicine&quot;,
+    &quot;Neuropsychology&quot;,
+    &quot;Occupational Therapy&quot;,
+    &quot;Physical Therapy&quot;,
+    &quot;Psychiatry&quot;,
+    &quot;School Psychology&quot;,
+    &quot;Social Work&quot;,
+    &quot;Special Education&quot;,
+    &quot;Speech–Language Pathology/Audiology&quot;,
+    &quot;Other (answer in next question)&quot;
+  )
+)
+
+certify_attend &lt;- tibble(
+  item =
+    str_c(
+      &quot;I certify that I am the person who attended &quot;,
+      &quot;the live webinar and completed this evaluation.&quot;
+    ),
+  value = 1,
+  label = &quot;Yes&quot;
+)
+
+item_value_label_map &lt;- bind_rows(
+  recommend_CE,
+  webinar_format,
+  webinar_time,
+  learn_CE,
+  highest_degree,
+  field_work,
+  certify_attend
+)</code></pre>
+<p><br></p>
+</div>
+<div id="commented-snippets" class="section level6">
+<h6>COMMENTED SNIPPETS</h6>
+<p>Load libraries and read input data.</p>
+<pre class="r"><code>suppressMessages(library(here))
+suppressMessages(suppressWarnings(library(tidyverse)))
+suppressMessages(library(xlsx))
+
+input &lt;-
+  suppressMessages(read_csv(here(
+    &quot;INPUT-FILES/summary-evaluation-data.csv&quot;
+  )))</code></pre>
+<p>Initialize tokens representing job-specific elements. These tokens are of three types:</p>
+<ul>
+<li>Tokens that allow subsequent code to segregate blocks of contiguous columns. These tokens either identify the boundary columns of these contiguous blocks (e.g, <code>token_super_sub_first_col</code>), or they contain the names of all of the columns in a block (e.g., <code>token_lhs_intact_cols</code>).</li>
+<li><code>token_split_destination_cols</code>, which holds the names of interim destination columns for the super/sub-ordinate question text (names contain <code>q</code>) and numerical responses (names contain <code>r</code>). The token is a character vector containing the destination column names in question-response pairs (e.g., <code>c(&quot;q1&quot;, &quot;r1&quot;, &quot;q2&quot;, &quot;r2&quot;, &quot;q3&quot;, &quot;r3&quot;, &quot;q4&quot;, &quot;r4&quot;, &quot;q5&quot;, &quot;r5&quot;)</code>).
+<ul>
+<li>This vector should be set up to contain as many pairs as are required by the super-ordinate question that contains the MOST subordinate questions.</li>
+<li>Super-ordinate questions with fewer subordinate questions are handled automatically by the code.</li>
+</ul></li>
+<li><code>token_split_regex</code>, which holds the regular expression (here <code>&quot;:|(?&lt;=[[:digit:]]),&quot;</code>) that allows R to segregate the question text and numerical responses within each cell, so that these components can be sent to separate destination columns.
+<ul>
+<li>A <em>regular expression</em> describes a text element to search for and match in data. In R, regular expressions are written as strings enclosed in double quotes.</li>
+<li><code>:|(?&lt;=[[:digit:]]),</code> contains two elements separated by <code>|</code>, meaning that it will match <em>either</em> element.The LHS element is a colon <code>:</code>.</li>
+<li>The RHS contains two parts: an expression <code>&lt;=[[:digit:]]</code> enclosed in specialized parentheses <code>(?...)</code>, and a comma <code>,</code>. The comma is the character to match, and the specialized parenthetic expression denotes a <em>look-around</em>, which defines a position where the comma must appear in order to yield a match.
+<ul>
+<li>Within the specialized parentheses, we have <code>[[:digit:]]</code>, a character class that matches any digit from <code>0</code> to <code>9</code>. To its left is <code>&lt;=</code>, which in this context is the “preceded by” look-around operator.</li>
+<li>Thus, <code>(?&lt;=[[:digit:]])</code> is an instruction to look for a match to the right of a digit. Importantly, however, it does not, itself, match any text. It rather identifies a location to search.</li>
+</ul></li>
+<li>Taken as a whole, then, <code>&quot;:|(?&lt;=[[:digit:]]),&quot;</code> tells R to match <em>either</em> a colon <code>:</code> <em>or</em> a comma immediately preceded by a digit (i.e., in <code>3,</code>, R matches the <code>,</code>, but not the <code>3</code>). By matching only commas preceded by digits, we avoid matching other commas that may exist within a string that constitutes the text of a question.</li>
+<li>Earlier, we provided an example of cells containing a mixture of question text and numerical responses (e.g., <code>Overall educational experience: 5 | Excellent, Accessibility of platforms/materi…</code>). Note that the regular expression in <code>token_split_regex</code> is set up to match the two characters, <code>:</code> and <code>,</code>, that mark the boundaries between question text and numerical responses. And, as noted above, we match only the commas that are located in boundary positions, not commas that may be located within the contiguous text of a question.</li>
+</ul></li>
+</ul>
+<pre class="r"><code>names_input &lt;- names(input)
+token_super_sub_first_col &lt;- &quot;General Live Webinar Experience&quot;
+token_super_sub_last_col &lt;- &quot;Usefulness of Content&quot;
+token_addl_cols_for_freq_counts &lt;- c(&quot;Would you recommend this CE program to others?&quot;, 
+                                     &quot;In general, what format do you prefer for webinars? Choose all that apply:&quot;, 
+                                     &quot;In general, what time of day do you prefer to begin a live webinar?&quot;, 
+                                     &quot;How did you learn about this CE program?&quot;, 
+                                     &quot;What is your highest academic degree?&quot;,
+                                     &quot;What is your field of work?&quot;, 
+                                     &quot;I certify that I am the person who attended the live webinar and completed this evaluation.&quot;)
+token_lhs_intact_cols &lt;- c(&quot;First Name&quot;, &quot;Last Name&quot;, &quot;Email&quot;, &quot;Credits&quot;)
+token_rhs_text_cols &lt;- c(&quot;How will you use the knowledge gained from this course within your practice?&quot;,
+                         &quot;If you selected Other, please specify:&quot;,
+                         str_c(&quot;Please share any other feedback you have, including suggestions &quot;,
+                         &quot;for future continuing education you’d like to see available through WPS, &quot;, 
+                         &quot;such as specific topics for live workshops, webinars, or independent study opportunities:&quot;),
+                         &quot;If you selected Other, please specify:_1&quot;)
+token_split_destination_cols &lt;- c(&quot;q1&quot;, &quot;r1&quot;, &quot;q2&quot;, &quot;r2&quot;, &quot;q3&quot;, &quot;r3&quot;, &quot;q4&quot;, &quot;r4&quot;, &quot;q5&quot;, &quot;r5&quot;)
+token_split_regex &lt;- &quot;:|(?&lt;=[[:digit:]]),&quot;</code></pre>
+<p>We now use these tokens to segregate and process blocks of columns for downstream processing. Some details to note:</p>
+<ul>
+<li>Within <code>dplyr::select()</code>, we can use tokens (e.g., <code>token_super_sub_first_col</code>, <code>token_super_sub_last_col</code>) to designate the first and last columns in a block. Because these tokens are character vectors, we need to wrap them in the tidyselect helper <code>all_of()</code> when we pass them to a <code>dplyr</code> selecting function.</li>
+<li>For data cleanup, we prefer elegant, generalizeable solutions, but for expediency’s sake we sometimes make do with hard-coded work-arounds. The snippet below contains an example of such a work-around; we use <code>stringr::str_replace_all()</code> to strip out all different versions of the unneeded value labels for the sub-ordinate question numerical responses. These versions are stated explicitly in the code, a classic, non-generalizable, hard-coded solution. The desired recoding (or stripping, in which we replace a certain pattern with <code>&quot;&quot;</code>) can be passed to <code>str_replace_all()</code> in the form of a vector of pattern-replacement pairs (e.g, <code>&quot; [|] Excellent&quot; = &quot;&quot;</code>).</li>
+<li>Note how, within <code>str_replace_all()</code>, the vertical pipe character is enclosed in straight brackets (e.g., <code>[|]</code>). Because the vertical pipe is a reserved character in R, it must be “escaped” when it is part of a search string in a text-replacement procedure. It turns out that enclosure in straight brackets is the most reliable way to “escape” the vertical pipe.</li>
+<li>We transform completion dates in the <code>Completed</code> column into a standard UTC format with <code>lubridate::mdy_hm()</code>, using the version of this function that matches the input format of the dates. We use <code>dplyr::transmute()</code> for this operation, because it discards the input column as it creates the new, properly formatted <code>Completed</code> column.</li>
+<li>Some of the input columns are logical vectors, a format that is not needed in the output. We transform these columns to character type with <code>mutate(across(where(is.logical), as.character))</code>. Here, <code>dplyr::across()</code> is used to identify the columns to be passed to <code>base::as.character</code>. When those columns are defined by a predicate function (e.g., <code>base::is.logical()</code>), that function must be wrapped in <code>tidyselect::where()</code>, which returns all columns for which predicate function returns <code>TRUE</code>.</li>
+</ul>
+<pre class="r"><code>df_super_sub_cols &lt;- input %&gt;% 
+  select(all_of(token_super_sub_first_col):all_of(token_super_sub_last_col)) %&gt;% 
+  mutate(across(everything(),
+                ~ str_replace_all(
+                  .,
+                  c(
+                    &quot; [|] Excellent&quot; = &quot;&quot;,
+                    &quot; [|] Above average&quot; = &quot;&quot;,
+                    &quot; [|] Average&quot; = &quot;&quot;,
+                    &quot; [|] Below average&quot; = &quot;&quot;,
+                    &quot; [|] Poor&quot; = &quot;&quot;,
+                    &quot; [|] Strongly agree&quot; = &quot;&quot;,
+                    &quot; [|] Agree&quot; = &quot;&quot;,
+                    &quot; [|] Neutral&quot; = &quot;&quot;,
+                    &quot; [|] Disagree&quot; = &quot;&quot;,
+                    &quot; [|] Strongly disagree&quot; = &quot;&quot;,
+                    &quot; [|] Extremely useful&quot; = &quot;&quot;,
+                    &quot; [|] A good deal useful&quot; = &quot;&quot;,
+                    &quot; [|] Somewhat useful&quot; = &quot;&quot;,
+                    &quot; [|] A little useful&quot; = &quot;&quot;,
+                    &quot; [|] Not useful&quot; = &quot;&quot;,
+                    &quot; [|] A great deal&quot; = &quot;&quot;,
+                    &quot; [|] More than average&quot; = &quot;&quot;,
+                    &quot; [|] Average&quot; = &quot;&quot;,
+                    &quot; [|] Less than average&quot; = &quot;&quot;,
+                    &quot; [|] Very little&quot; = &quot;&quot;
+                  )
+                )))
+
+date_col &lt;- input %&gt;% 
+  select(Completed) %&gt;% 
+  transmute(Completed = lubridate::mdy_hm(Completed))
+
+lhs_cols &lt;- input %&gt;% 
+  select(all_of(token_lhs_intact_cols)) %&gt;% 
+  mutate(across(where(is.logical), as.character))
+
+rhs_num_cols &lt;- input %&gt;% 
+  select(all_of(token_addl_cols_for_freq_counts))
+
+rhs_text_cols &lt;- input %&gt;% 
+  select(all_of(token_rhs_text_cols))</code></pre>
+<p>The columns designated by <code>token_addl_cols_for_freq_counts</code> are questions that each have a unique, finite set of numerically coded response choices. In the raw input, the cells of these columns contain the text value labels for these response choices, instead of the numerical codes needed for the output. Because each question has its own response options, the recoding instructions must be hard-coded into the script, as a lookup table that can be used downstream to replace text value labels with numerical codes.</p>
+<p>To create the required lookup table, we use <code>tibble::tibble()</code> to initialize new data frames, one for each of the columns designated by <code>token_addl_cols_for_freq_counts</code>. Each new data frame has one row for each possible numerical response choice to that question (thus the data frames have differing lengths). All data frames have the same three columns:</p>
+<ul>
+<li><code>item</code>: The question, as a string (e.g., <code>&quot;Would you recommend this CE program to others?&quot;</code>). We use <code>base::rep()</code> to repeat the string in each cell of the <code>item</code> column;</li>
+<li><code>value</code>: a vector of integers expressing the range of numerical response choices (e.g., <code>1:2</code>);</li>
+<li><code>label</code>: a character vector holding the value labels associated with each response choice (e.g., <code>c(&quot;Yes&quot;, &quot;No&quot;)</code>).</li>
+</ul>
+<p>The next snippet shows the procedure for generating the first two (<code>recommend_CE</code>, <code>webinar_format</code>) of these new data frames.</p>
+<pre class="r"><code>recommend_CE &lt;- tibble(
+  item = rep(&quot;Would you recommend this CE program to others?&quot;, 2),
+  value = 1:2,
+  label = c(&quot;Yes&quot;, &quot;No&quot;)
+)
+
+webinar_format &lt;- tibble(
+  item = rep(
+    str_c(
+      &quot;In general, what format do you prefer &quot;,
+      &quot;for webinars?&quot;
+    ),
+    6
+  ),
+  value = 1:6,
+  label = c(
+    &quot;Single half-day (3–4 hours/day)&quot;,
+    &quot;Single full-day (5–6 hours/day)&quot;,
+    &quot;Multiday (half-days)&quot;,
+    &quot;Multiday (full-days)&quot;,
+    &quot;Pre-recorded at own pace (no live instruction)&quot;,
+    &quot;Blended instruction (live webinar combined with independent study)&quot;
+  )
+)</code></pre>
+<p>As a further example, we can examine <code>recommend_CE</code>:</p>
+<pre><code>item                                           value label
+
+Would you recommend this CE program to others?     1 Yes  
+Would you recommend this CE program to others?     2 No   </code></pre>
+<p>To create the lookup table required for downstream processing, we combine the new data frames into a single data frame <code>item_value_label_map</code>, stacking them one on top of the other with <code>dplyr::bind_rows()</code>.</p>
+<pre class="r"><code>item_value_label_map &lt;- bind_rows(
+  recommend_CE,
+  webinar_format,
+  webinar_time,
+  learn_CE,
+  highest_degree,
+  field_work,
+  certify_attend
+)
+NA</code></pre>
+<p><br></p>
+</div>
+</div>
+<div id="generate-frequency-table-output" class="section level4">
+<h4>Generate frequency table output</h4>
+<div id="runnable-code-1" class="section level6">
+<h6>RUNNABLE CODE</h6>
+<pre class="r"><code>q_name &lt;- str_c(str_replace_all(names(df_super_sub_cols), &quot; &quot;, &quot;_&quot;), &quot;:&quot;)
 
 list_super_sub_cols &lt;- map(
   names(df_super_sub_cols),
@@ -363,107 +627,6 @@ school_psych &lt;- output %&gt;%
     row.names = FALSE,
     append = FALSE
   )</code></pre>
-<p><br></p>
-</div>
-<div id="commented-snippets" class="section level6">
-<h6>COMMENTED SNIPPETS</h6>
-<p>Load libraries and read input data.</p>
-<pre class="r"><code>suppressMessages(library(here))
-suppressMessages(suppressWarnings(library(tidyverse)))
-suppressMessages(library(xlsx))
-
-input &lt;-
-  suppressMessages(read_csv(here(
-    &quot;INPUT-FILES/summary-evaluation-data.csv&quot;
-  )))</code></pre>
-<p>Initialize tokens representing job-specific elements. These tokens are of three types:</p>
-<ul>
-<li>Tokens that allow subsequent code to segregate blocks of contiguous columns. These tokens either identify the boundary columns of these contiguous blocks (e.g, <code>token_super_sub_first_col</code>), or they contain the names of all of the columns in a block (e.g., <code>token_lhs_intact_cols</code>).</li>
-<li><code>token_split_destination_cols</code>, which holds the names of interim destination columns for the super/sub-ordinate question text (names contain <code>q</code>) and numerical responses (names contain <code>r</code>). The token is a character vector containing the destination column names in question-response pairs (e.g., <code>c(&quot;q1&quot;, &quot;r1&quot;, &quot;q2&quot;, &quot;r2&quot;, &quot;q3&quot;, &quot;r3&quot;, &quot;q4&quot;, &quot;r4&quot;, &quot;q5&quot;, &quot;r5&quot;)</code>).
-<ul>
-<li>This vector should be set up to contain as many pairs as are required by the super-ordinate question that contains the MOST subordinate questions.</li>
-<li>Super-ordinate questions with fewer subordinate questions are handled automatically by the code.</li>
-</ul></li>
-<li><code>token_split_regex</code>, which contains the regular expression (here <code>&quot;:|(?&lt;=[[:digit:]]),&quot;</code>) that allows R to segregate the question text and numerical responses within each cell, so that these components can be sent to separate destination columns.
-<ul>
-<li>A <em>regular expression</em> describes a text element to search for and match in data. In R, regular expressions are written as strings enclosed in double quotes.</li>
-<li><code>:|(?&lt;=[[:digit:]]),</code> contains two elements separated by <code>|</code>, meaning that it will match <em>either</em> element.The LHS element is a colon <code>:</code>.</li>
-<li>The RHS contains two parts: an expression <code>&lt;=[[:digit:]]</code> enclosed in specialized parentheses <code>(?...)</code>, and a comma <code>,</code>. The comma is the character to match, and the specialized parenthetic expression denotes a <em>look-around</em>, which defines a position where the comma must appear in order to yield a match.
-<ul>
-<li>Within the specialized parentheses, we have <code>[[:digit:]]</code>, a character class that matches any digit from <code>0</code> to <code>9</code>. To its left is <code>&lt;=</code>, which in this context is the “preceded by” look-around operator.</li>
-<li>Thus, <code>(?&lt;=[[:digit:]])</code> is an instruction to look for a match to the right of a digit. Importantly, however, it does not, itself, match any text. It rather identifies a location to search.</li>
-</ul></li>
-<li>Taken as a whole, then, <code>&quot;:|(?&lt;=[[:digit:]]),&quot;</code> tells R to match <em>either</em> a colon <code>:</code> <em>or</em> a comma immediately preceded by a digit (i.e., in <code>3,</code>, R matches the <code>,</code>, but not the <code>3</code>). By matching only commas preceded by digits, we avoid matching other commas that may exist within a string that constitutes the text of a question.</li>
-<li>Earlier, we provided an example of cells containing a mixture of question text and numerical responses (e.g., <code>Overall educational experience: 3, Accessibility of...</code>). Note that the regular expression in <code>token_split_regex</code> is set up to match the two characters, <code>:</code> and <code>,</code>, that mark the boundaries between question text and numerical responses. And, as noted above, we match only the commas that are located in boundary positions, not commas that may be located within the text of a question.</li>
-</ul></li>
-</ul>
-<pre class="r"><code>names_input &lt;- names(input)
-token_super_sub_first_col &lt;- &quot;General Live Webinar Experience&quot;
-token_super_sub_last_col &lt;- &quot;Usefulness of Content&quot;
-token_addl_cols_for_freq_counts &lt;- c(&quot;Would you recommend this CE program to others?&quot;, 
-                                     &quot;In general, what format do you prefer for webinars? Choose all that apply:&quot;, 
-                                     &quot;In general, what time of day do you prefer to begin a live webinar?&quot;, 
-                                     &quot;How did you learn about this CE program?&quot;, 
-                                     &quot;What is your highest academic degree?&quot;,
-                                     &quot;What is your field of work?&quot;, 
-                                     &quot;I certify that I am the person who attended the live webinar and completed this evaluation.&quot;)
-token_lhs_intact_cols &lt;- c(&quot;First Name&quot;, &quot;Last Name&quot;, &quot;Email&quot;, &quot;Credits&quot;)
-token_rhs_text_cols &lt;- c(&quot;How will you use the knowledge gained from this course within your practice?&quot;,
-                         &quot;If you selected Other, please specify:&quot;,
-                         str_c(&quot;Please share any other feedback you have, including suggestions &quot;,
-                         &quot;for future continuing education you’d like to see available through WPS, &quot;, 
-                         &quot;such as specific topics for live workshops, webinars, or independent study opportunities:&quot;),
-                         &quot;If you selected Other, please specify:_1&quot;)
-token_split_destination_cols &lt;- c(&quot;q1&quot;, &quot;r1&quot;, &quot;q2&quot;, &quot;r2&quot;, &quot;q3&quot;, &quot;r3&quot;, &quot;q4&quot;, &quot;r4&quot;, &quot;q5&quot;, &quot;r5&quot;)
-token_split_regex &lt;- &quot;:|(?&lt;=[[:digit:]]),&quot;</code></pre>
-<p>We now use these tokens to segregate and process blocks of columns for downstream processing. Some details to note:</p>
-<ul>
-<li>Within <code>dplyr::select()</code>, we can use tokens (e.g., <code>token_super_sub_first_col</code>, <code>token_super_sub_last_col</code>) to designate the first and last columns in a block. Because these tokens are character vectors, within <code>select()</code> we need to wrap them in the tidyselect helper <code>all_of()</code>.</li>
-<li>We transform completion dates in the <code>Completed</code> column into a standard UTC format with <code>lubridate::mdy_hm()</code>, using the version of this function that matches the input format of the dates. We use <code>dplyr::transmute()</code> for this operation, because it discards the input column as it creates the new, properly formatted <code>Completed</code> column.</li>
-<li>Some of the input columns are logical vectors, a format that is not needed in the output. We transform these columns to character type with <code>mutate(across(where(is.logical), as.character))</code>. Here, <code>dplyr::across()</code> is used to identify the columns to be passed to <code>base::as.character</code>. When those columns are defined by a predicate function (e.g., <code>base::is.logical()</code>), that function must be wrapped in <code>tidyselect::where()</code>, which returns all columns for which predicate function returns <code>TRUE</code>.</li>
-</ul>
-<pre class="r"><code>df_super_sub_cols &lt;- input %&gt;% 
-  select(all_of(token_super_sub_first_col):all_of(token_super_sub_last_col)) %&gt;% 
-  mutate(across(everything(),
-                ~ str_replace_all(
-                  .,
-                  c(
-                    &quot; [|] Excellent&quot; = &quot;&quot;,
-                    &quot; [|] Above average&quot; = &quot;&quot;,
-                    &quot; [|] Average&quot; = &quot;&quot;,
-                    &quot; [|] Below average&quot; = &quot;&quot;,
-                    &quot; [|] Poor&quot; = &quot;&quot;,
-                    &quot; [|] Strongly agree&quot; = &quot;&quot;,
-                    &quot; [|] Agree&quot; = &quot;&quot;,
-                    &quot; [|] Neutral&quot; = &quot;&quot;,
-                    &quot; [|] Disagree&quot; = &quot;&quot;,
-                    &quot; [|] Strongly disagree&quot; = &quot;&quot;,
-                    &quot; [|] Extremely useful&quot; = &quot;&quot;,
-                    &quot; [|] A good deal useful&quot; = &quot;&quot;,
-                    &quot; [|] Somewhat useful&quot; = &quot;&quot;,
-                    &quot; [|] A little useful&quot; = &quot;&quot;,
-                    &quot; [|] Not useful&quot; = &quot;&quot;,
-                    &quot; [|] A great deal&quot; = &quot;&quot;,
-                    &quot; [|] More than average&quot; = &quot;&quot;,
-                    &quot; [|] Average&quot; = &quot;&quot;,
-                    &quot; [|] Less than average&quot; = &quot;&quot;,
-                    &quot; [|] Very little&quot; = &quot;&quot;
-                  )
-                )))
-
-date_col &lt;- input %&gt;% 
-  select(Completed) %&gt;% 
-  transmute(Completed = lubridate::mdy_hm(Completed))
-
-lhs_cols &lt;- input %&gt;% 
-  select(all_of(token_lhs_intact_cols)) %&gt;% 
-  mutate(across(where(is.logical), as.character))
-
-rhs_num_cols &lt;- input %&gt;% 
-  select(all_of(token_addl_cols_for_freq_counts))
-
-rhs_text_cols &lt;- input %&gt;% 
-  select(all_of(token_rhs_text_cols))</code></pre>
 </div>
 </div>
 

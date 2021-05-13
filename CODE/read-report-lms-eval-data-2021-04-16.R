@@ -27,9 +27,6 @@ token_rhs_text_cols <- c("How will you use the knowledge gained from this course
 token_split_destination_cols <- c("q1", "r1", "q2", "r2", "q3", "r3", "q4", "r4", "q5", "r5")
 token_split_regex <- ":|(?<=[[:digit:]]),"
 
-# DOCUMENT USE OF SQUARE BRACKETS WHEN VERTICAL PIPE USED IN STRING EXPRESSION
-# segregate super-sub cols. Also clean up superfluous rating labels with
-# str_replace_all(), which can take a vector of pattern-replacement pairs.
 df_super_sub_cols <- input %>% 
   select(all_of(token_super_sub_first_col):all_of(token_super_sub_last_col)) %>% 
   mutate(across(everything(),
@@ -59,12 +56,10 @@ df_super_sub_cols <- input %>%
                   )
                 )))
 
-# segregate and process date-time col
 date_col <- input %>% 
   select(Completed) %>% 
   transmute(Completed = lubridate::mdy_hm(Completed))
 
-# segregate LHS and RHS side cols for final output
 lhs_cols <- input %>% 
   select(all_of(token_lhs_intact_cols)) %>% 
   mutate(across(where(is.logical), as.character))
