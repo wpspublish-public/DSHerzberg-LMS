@@ -29,7 +29,7 @@ Overall educational experience: 5 | Excellent, Accessibility of platforms/materi
 ```
 The column name, `Access/Setting/Overall Experience` is a super-ordinate question. Going down the column, the cells contain the sub-ordinate questions (e.g., `Overall educational experience`, `Accessibility of platforms/materials`, etc.), the numerical responses to those sub-ordinate questions, and the text labels corresponding to each numerical response (e.g., `5 | Excellent`. This represents a classic "untidy" data input. The cleanup process creates separate columns for each super- and sub-ordinate question pair, with the rows containing _only_ the numerical responses by person (i.e, without the text labels in the input).
 
-#### Data preparation and cleanup
+#### Initial data preparation and cleanup
 
 ###### RUNNABLE CODE
 ```{r prep, eval = FALSE}
@@ -235,7 +235,7 @@ Initialize tokens representing job-specific elements. These tokens are of three 
 We now use these tokens to segregate and process blocks of columns for downstream processing. Some details to note:
 
 * Within `dplyr::select()`, we can use tokens (e.g., `token_super_sub_first_col`, `token_super_sub_last_col`) to designate the first and last columns in a block. Because these tokens are character vectors, we need to wrap them in the tidyselect helper `all_of()` when we pass them to a `dplyr` selecting function.
-* For data cleanup, we prefer elegant, generalizeable solutions, but for expediency's sake we sometimes make do with hard-coded work-arounds. The snippet below contains an example of such a work-around; we use `stringr::str_replace_all()` to strip out all different versions of the unneeded value labels for the sub-ordinate question numerical responses. These versions are stated explicitly in the code, a classic, non-generalizable, hard-coded solution. The desired recoding (or stripping, in which we replace a certain pattern with `""`) can be passed to `str_replace_all()` in the form of a vector of pattern-replacement pairs (e.g, `" [|] Excellent" = ""`).
+* For data cleanup, we prefer elegant, generalizeable solutions, but for expediency's sake we sometimes make do with hard-coded work-arounds. The snippet below contains an example of such a work-around; we use `stringr::str_replace_all()` to strip out all different versions of the unneeded value labels for the sub-ordinate question numerical responses. These versions are hard-coded (stated explicitly in the code) so they must be edited when the script is adapted to new projects. The desired recoding (or stripping, in which we replace a certain pattern with `""`) can be passed to `str_replace_all()` in the form of a vector of pattern-replacement pairs (e.g, `" [|] Excellent" = ""`).
 * Note how, within `str_replace_all()`, the vertical pipe character is enclosed in straight brackets (e.g., `[|]`). Because the vertical pipe is a reserved character in R, it must be "escaped" when it is part of a search string in a text-replacement procedure. It turns out that enclosure in straight brackets is the most reliable way to "escape" the vertical pipe.
 * We transform completion dates in the `Completed` column into a standard UTC format with `lubridate::mdy_hm()`, using the version of this function that matches the input format of the dates. We use `dplyr::transmute()` for this operation, because it discards the input column as it creates the new, properly formatted `Completed` column.
 * Some of the input columns are logical vectors, a format that is not needed in the output. We transform these columns to character type with `mutate(across(where(is.logical), as.character))`. Here, `dplyr::across()` is used to identify the columns to be passed to `base::as.character`. When those columns are defined by a predicate function (e.g., `base::is.logical()`), that function must be wrapped in `tidyselect::where()`, which returns all columns for which predicate function returns `TRUE`.
@@ -260,7 +260,7 @@ Would you recommend this CE program to others?     1 Yes
 Would you recommend this CE program to others?     2 No   
 ```
 To create the lookup table required for downstream processing, we combine the new data frames into a single data frame `item_value_label_map`, stacking them one on top of the other with `dplyr::bind_rows()`.
-```{r prep, echo = 167:176, eval = FALSE}
+```{r prep, echo = 167:175, eval = FALSE}
 ```
 
 <br>
@@ -374,4 +374,31 @@ school_psych <- output %>%
     row.names = FALSE,
     append = FALSE
   )
+```
+<br>
+
+###### COMMENTED SNIPPETS
+To create the required frequency table output, we need to segregate and reformat the text of the super-ordinate questions. The strings that constitute those questions are the column names of `df_super_sub_cols`, a data frame generated earlier in this workflow. We now initialize a new vector `q_name` to hold the super-ordinate questions. We format the question text in two steps:
+
+1. We pass `names(df_super_sub_cols)` to `str_replace_all()`, replacing blank spaces `" "` with underscores `"_"`.
+2. We use `str_c()` to append a colon `":"` to each string that results from step 1.
+```{r freq, echo = 1, eval = FALSE}
+```
+The next step is to segregate the sub-ordinate questions, and the numerical responses to those questions. Currently, those two data elements are combined in the cells of `df_super_sub_cols`. The next snippet separates the questions from the responses, placing them in discrete destination columns.
+
+The snippet below is a mapping procedure in which we iterate over the columns of `df_super_sub_cols`. As the `.x` argument to `map()`, we pass `names(df_super_sub_cols)` so that we can iteratively apply a function to each of these columns.
+
+Recall that `df_super_sub_cols` is a data frame with a column for each super-ordinate question. Within those columns are the cells described in the previous paragraph, in which the sub-ordinate questions and their numerical responses are combined in one long string, alternating as follows: first question, first response, second question, second response, and so forth.
+
+Within `map()`, we call `tidyr::separate()` to divide up these long strings and send them to discrete destination columns. We pass four arguments to `separate()`:
+
+* `!!sym(.x)` names the column within `df_super_sub_cols` whose cell contents will be split with `separate()`. `.x` designates the currently iterated column as the one to split. Because `.x` represents a character vector, its elements are themselves strings. To process these strings as column names within `separate()`, we must unquote them with the bang-bang `!!` operator, and coerce them to symbols with `rlang::sym()`.
+* `all_of(token_split_destination_cols)` (argument label `into =` omitted) names the destination columns to be created by `separate()`. These names are held in `token_split_desinination_cols`, a character vector created in an earlier step. We use the `tidyselect` helper `all_of()` to specify that all elements of the vector are to be used as the names of the new destination columns.
+* `token_split_regex` (argument label `sep =` omitted): a regular expression that evaluates to the positions or characters, within the long string, where `separate()` splits the text into substrings.^[`token_split_regex` was defined in detail earlier in this document]
+* `remove = TRUE` means the input columns from `df_super_sub_cols` will not be included in the output, which at this point is a data frame with alternating question-response columns (e.g., `q1`, `r1`, `q2`, `r2`, and so forth).
+
+Recall that `token_split_destination_cols` was set up earlier as a character vector containing destination column names in question-response pairs (e.g.,  c("q1", "r1", "q2", "r2", "q3", "r3", "q4", "r4", "q5", "r5")). Because `token_split_destination_cols` holds as many pairs as are required by the super-ordinate question that contains the MOST subordinate questions, some of the data frames generated at this point will have empty columns (i.e., columns whose cells are all `NA`). The reason for this is that the associated super-ordinate questions have fewer actual sub-ordinate question-response pairs than the maximum number denoted by `token_split_destination_cols`. For these situations, columns `q5` and `r5`, for example, will be empty. We drop these empty columns with `janitor::remove_empty("cols")`, thereby "right-sizing" the column count in each output data frame.
+
+Because all of this processing happens within a call of `map()`, the output is a list of data frames, one for each super-ordinate question. Each data frame holds, in discrete columns, the sub-ordinate questions and numerical responses corresponding to a single super-ordinate question.
+```{r freq, echo = 3:14, eval = FALSE}
 ```

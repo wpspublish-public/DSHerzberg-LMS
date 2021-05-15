@@ -186,8 +186,8 @@ Overall educational experience: 3 | Average, Accessibility of platforms/material
 Overall educational experience: 5 | Excellent, Accessibility of platforms/materi…</code></pre>
 <p>The column name, <code>Access/Setting/Overall Experience</code> is a super-ordinate question. Going down the column, the cells contain the sub-ordinate questions (e.g., <code>Overall educational experience</code>, <code>Accessibility of platforms/materials</code>, etc.), the numerical responses to those sub-ordinate questions, and the text labels corresponding to each numerical response (e.g., <code>5 | Excellent</code>. This represents a classic “untidy” data input. The cleanup process creates separate columns for each super- and sub-ordinate question pair, with the rows containing <em>only</em> the numerical responses by person (i.e, without the text labels in the input).</p>
 </div>
-<div id="data-preparation-and-cleanup" class="section level4">
-<h4>Data preparation and cleanup</h4>
+<div id="initial-data-preparation-and-cleanup" class="section level4">
+<h4>Initial data preparation and cleanup</h4>
 <div id="runnable-code" class="section level6">
 <h6>RUNNABLE CODE</h6>
 <pre class="r"><code>suppressMessages(library(here))
@@ -421,7 +421,7 @@ token_split_regex &lt;- &quot;:|(?&lt;=[[:digit:]]),&quot;</code></pre>
 <p>We now use these tokens to segregate and process blocks of columns for downstream processing. Some details to note:</p>
 <ul>
 <li>Within <code>dplyr::select()</code>, we can use tokens (e.g., <code>token_super_sub_first_col</code>, <code>token_super_sub_last_col</code>) to designate the first and last columns in a block. Because these tokens are character vectors, we need to wrap them in the tidyselect helper <code>all_of()</code> when we pass them to a <code>dplyr</code> selecting function.</li>
-<li>For data cleanup, we prefer elegant, generalizeable solutions, but for expediency’s sake we sometimes make do with hard-coded work-arounds. The snippet below contains an example of such a work-around; we use <code>stringr::str_replace_all()</code> to strip out all different versions of the unneeded value labels for the sub-ordinate question numerical responses. These versions are stated explicitly in the code, a classic, non-generalizable, hard-coded solution. The desired recoding (or stripping, in which we replace a certain pattern with <code>&quot;&quot;</code>) can be passed to <code>str_replace_all()</code> in the form of a vector of pattern-replacement pairs (e.g, <code>&quot; [|] Excellent&quot; = &quot;&quot;</code>).</li>
+<li>For data cleanup, we prefer elegant, generalizeable solutions, but for expediency’s sake we sometimes make do with hard-coded work-arounds. The snippet below contains an example of such a work-around; we use <code>stringr::str_replace_all()</code> to strip out all different versions of the unneeded value labels for the sub-ordinate question numerical responses. These versions are hard-coded (stated explicitly in the code) so they must be edited when the script is adapted to new projects. The desired recoding (or stripping, in which we replace a certain pattern with <code>&quot;&quot;</code>) can be passed to <code>str_replace_all()</code> in the form of a vector of pattern-replacement pairs (e.g, <code>&quot; [|] Excellent&quot; = &quot;&quot;</code>).</li>
 <li>Note how, within <code>str_replace_all()</code>, the vertical pipe character is enclosed in straight brackets (e.g., <code>[|]</code>). Because the vertical pipe is a reserved character in R, it must be “escaped” when it is part of a search string in a text-replacement procedure. It turns out that enclosure in straight brackets is the most reliable way to “escape” the vertical pipe.</li>
 <li>We transform completion dates in the <code>Completed</code> column into a standard UTC format with <code>lubridate::mdy_hm()</code>, using the version of this function that matches the input format of the dates. We use <code>dplyr::transmute()</code> for this operation, because it discards the input column as it creates the new, properly formatted <code>Completed</code> column.</li>
 <li>Some of the input columns are logical vectors, a format that is not needed in the output. We transform these columns to character type with <code>mutate(across(where(is.logical), as.character))</code>. Here, <code>dplyr::across()</code> is used to identify the columns to be passed to <code>base::as.character</code>. When those columns are defined by a predicate function (e.g., <code>base::is.logical()</code>), that function must be wrapped in <code>tidyselect::where()</code>, which returns all columns for which predicate function returns <code>TRUE</code>.</li>
@@ -514,8 +514,7 @@ Would you recommend this CE program to others?     2 No   </code></pre>
   highest_degree,
   field_work,
   certify_attend
-)
-NA</code></pre>
+)</code></pre>
 <p><br></p>
 </div>
 </div>
@@ -627,7 +626,47 @@ school_psych &lt;- output %&gt;%
     row.names = FALSE,
     append = FALSE
   )</code></pre>
+<p><br></p>
 </div>
+<div id="commented-snippets-1" class="section level6">
+<h6>COMMENTED SNIPPETS</h6>
+<p>To create the required frequency table output, we need to segregate and reformat the text of the super-ordinate questions. The strings that constitute those questions are the column names of <code>df_super_sub_cols</code>, a data frame generated earlier in this workflow. We now initialize a new vector <code>q_name</code> to hold the super-ordinate questions. We format the question text in two steps:</p>
+<ol style="list-style-type: decimal">
+<li>We pass <code>names(df_super_sub_cols)</code> to <code>str_replace_all()</code>, replacing blank spaces <code>&quot; &quot;</code> with underscores <code>&quot;_&quot;</code>.</li>
+<li>We use <code>str_c()</code> to append a colon <code>&quot;:&quot;</code> to each string that results from step 1.</li>
+</ol>
+<pre class="r"><code>q_name &lt;- str_c(str_replace_all(names(df_super_sub_cols), &quot; &quot;, &quot;_&quot;), &quot;:&quot;)</code></pre>
+<p>The next step is to segregate the sub-ordinate questions, and the numerical responses to those questions. Currently, those two data elements are combined in the cells of <code>df_super_sub_cols</code>. The next snippet separates the questions from the responses, placing them in discrete destination columns.</p>
+<p>The snippet below is a mapping procedure in which we iterate over the columns of <code>df_super_sub_cols</code>. As the <code>.x</code> argument to <code>map()</code>, we pass <code>names(df_super_sub_cols)</code> so that we can iteratively apply a function to each of these columns.</p>
+<p>Recall that <code>df_super_sub_cols</code> is a data frame with a column for each super-ordinate question. Within those columns are the cells described in the previous paragraph, in which the sub-ordinate questions and their numerical responses are combined in one long string, alternating as follows: first question, first response, second question, second response, and so forth.</p>
+<p>Within <code>map()</code>, we call <code>tidyr::separate()</code> to divide up these long strings and send them to discrete destination columns. We pass four arguments to <code>separate()</code>:</p>
+<ul>
+<li><code>!!sym(.x)</code> names the column within <code>df_super_sub_cols</code> whose cell contents will be split with <code>separate()</code>. <code>.x</code> designates the currently iterated column as the one to split. Because <code>.x</code> represents a character vector, its elements are themselves strings. To process these strings as column names within <code>separate()</code>, we must unquote them with the bang-bang <code>!!</code> operator, and coerce them to symbols with <code>rlang::sym()</code>.</li>
+<li><code>all_of(token_split_destination_cols)</code> (argument label <code>into =</code> omitted) names the destination columns to be created by <code>separate()</code>. These names are held in <code>token_split_desinination_cols</code> a character vector created in an earlier step. We use the <code>tidyselect</code> helper <code>all_of()</code> to specify that all elements of the vector are to be used as the names of the new destination columns.</li>
+<li><code>token_split_regex</code> (argument label <code>sep =</code> omitted): a regular expression that evaluates to the positions or characters, within the long string, where <code>separate()</code> splits the text into substrings.<a href="#fn1" class="footnote-ref" id="fnref1"><sup>1</sup></a></li>
+<li><code>remove = TRUE</code> means the input columns from <code>df_super_sub_cols</code> will not be included in the output, which at this point is a data frame with alternating question-response columns (e.g., <code>q1</code>, <code>r1</code>, <code>q2</code>, <code>r2</code>, and so forth).</li>
+</ul>
+<p>Recall that <code>token_split_destination_cols</code> was set up earlier as a character vector containing destination column names in question-response pairs (e.g., c(“q1”, “r1”, “q2”, “r2”, “q3”, “r3”, “q4”, “r4”, “q5”, “r5”)). Because <code>token_split_destination_cols</code> holds as many pairs as are required by the super-ordinate question that contains the MOST subordinate questions, some of the data frames generated at this point will have empty columns (i.e., columns whose cells are all <code>NA</code>). The reason for this is that the associated super-ordinate questions have fewer actual sub-ordinate question-response pairs than the maximum number denoted by <code>token_split_destination_cols</code>. For these situations, columns <code>q5</code> and <code>r5</code>, for example, will be empty. We drop these empty columns with <code>janitor::remove_empty(&quot;cols&quot;)</code>, thereby “right-sizing” the column count in each output data frame.</p>
+<p>Because all of this processing happens within a call of <code>map()</code>, the output is a list of data frames, one for each super-ordinate question. Each data frame holds, in discrete columns, the sub-ordinate questions and numerical responses corresponding to a single super-ordinate question.</p>
+<pre class="r"><code>list_super_sub_cols &lt;- map(
+  names(df_super_sub_cols),
+  ~ df_super_sub_cols %&gt;%
+    select(!!sym(.x)) %&gt;%
+    separate(
+      !!sym(.x),
+      all_of(token_split_destination_cols),
+      token_split_regex,
+      remove = TRUE
+    ) %&gt;% 
+    janitor::remove_empty(&quot;cols&quot;)
+)</code></pre>
+</div>
+</div>
+<div class="footnotes">
+<hr />
+<ol>
+<li id="fn1"><p><code>token_split_regex</code> was defined in detail earlier in this document<a href="#fnref1" class="footnote-back">↩︎</a></p></li>
+</ol>
 </div>
 
 

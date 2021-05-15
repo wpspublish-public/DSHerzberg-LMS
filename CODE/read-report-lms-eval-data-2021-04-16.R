@@ -70,8 +70,6 @@ rhs_num_cols <- input %>%
 rhs_text_cols <- input %>% 
   select(all_of(token_rhs_text_cols))
 
-# Set up df to hold item-value-label mapping for rhs_num_cols
-
 recommend_CE <- tibble(
   item = rep("Would you recommend this CE program to others?", 2),
   value = 1:2,
@@ -176,25 +174,8 @@ item_value_label_map <- bind_rows(
   certify_attend
 )
 
-# CREATE FREQ TABLE FOR super_sub_cols
-
-# extract super-ordinate question name for output by replacing white space with
-# underscore, adding : as a separator for the subordinate question name, col
-# labels on output table are long labels containing both super- and sub- questions.
 q_name <- str_c(str_replace_all(names(df_super_sub_cols), " ", "_"), ":")
 
-# use `tidyr::separate` to split a single column containing a long string into
-# several cols. 1st arg names col to be split; 2nd arg is vec of column names to
-# hold the parts of the split string; 3rd arg is regex specifying the
-# characters to split on; 4th arg drops input col in output df. In this input
-# file, there are X super-sub questions to process, so we map() over the names
-# of those X questions. In addition, those X questions have differing
-# numbers of sub-questions. The way to handle this is to create enough output cols
-# (e.g., q1-r1  pairs) to handle question with the MOST sub-questions. The ones
-# with fewer sub-questions will have all NA in those extra columns, and the empty
-# cols can be dropped with janitor::remove_empty(). Here map returns a list of
-# X dfs, each containing the separated sub-questions and responses
-# corresponding to one super-ordinate question.
 list_super_sub_cols <- map(
   names(df_super_sub_cols),
   ~ df_super_sub_cols %>%
