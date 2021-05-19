@@ -384,11 +384,11 @@ To create the required frequency table output, we need to segregate and reformat
 2. We use `str_c()` to append a colon `":"` to each string that results from step 1.
 ```{r freq, echo = 1, eval = FALSE}
 ```
-The next step is to segregate the sub-ordinate questions, and the numerical responses to those questions. Currently, those two data elements are combined in the cells of `df_super_sub_cols`. The next snippet separates the questions from the responses, placing them in discrete destination columns.
+The next step is to segregate the sub-ordinate questions, and the numerical responses to those questions. Currently, those two data elements are combined in the cells of `df_super_sub_cols`. 
 
-The snippet below is a mapping procedure in which we iterate over the columns of `df_super_sub_cols`. As the `.x` argument to `map()`, we pass `names(df_super_sub_cols)` so that we can iteratively apply a function to each of these columns.
+The next snippet separates the questions from the responses, placing them in discrete destination columns. It does so with a mapping operation that iterates over the columns of `df_super_sub_cols`. As the `.x` argument to `map()`, we pass `names(df_super_sub_cols)` so that we can iteratively apply a function to each of these columns.
 
-Recall that `df_super_sub_cols` is a data frame with a column for each super-ordinate question. Within those columns are the cells described in the previous paragraph, in which the sub-ordinate questions and their numerical responses are combined in one long string, alternating as follows: first question, first response, second question, second response, and so forth.
+Recall that `df_super_sub_cols` is a data frame with a column for each super-ordinate question. Within those columns are the cells described above, in which the sub-ordinate questions and their numerical responses are combined in one long string, alternating as follows: first question, first response, second question, second response, and so forth.
 
 Within `map()`, we call `tidyr::separate()` to divide up these long strings and send them to discrete destination columns. We pass four arguments to `separate()`:
 
@@ -397,8 +397,13 @@ Within `map()`, we call `tidyr::separate()` to divide up these long strings and 
 * `token_split_regex` (argument label `sep =` omitted): a regular expression that evaluates to the positions or characters, within the long string, where `separate()` splits the text into substrings.^[`token_split_regex` was defined in detail earlier in this document]
 * `remove = TRUE` means the input columns from `df_super_sub_cols` will not be included in the output, which at this point is a data frame with alternating question-response columns (e.g., `q1`, `r1`, `q2`, `r2`, and so forth).
 
-Recall that `token_split_destination_cols` was set up earlier as a character vector containing destination column names in question-response pairs (e.g.,  c("q1", "r1", "q2", "r2", "q3", "r3", "q4", "r4", "q5", "r5")). Because `token_split_destination_cols` holds as many pairs as are required by the super-ordinate question that contains the MOST subordinate questions, some of the data frames generated at this point will have empty columns (i.e., columns whose cells are all `NA`). The reason for this is that the associated super-ordinate questions have fewer actual sub-ordinate question-response pairs than the maximum number denoted by `token_split_destination_cols`. For these situations, columns `q5` and `r5`, for example, will be empty. We drop these empty columns with `janitor::remove_empty("cols")`, thereby "right-sizing" the column count in each output data frame.
+Recall that `token_split_destination_cols` was set up earlier as a character vector containing destination column names in question-response pairs (e.g.,  `c("q1", "r1", "q2", "r2", "q3", "r3", "q4", "r4", "q5", "r5")`). Because `token_split_destination_cols` holds as many pairs as are required by the super-ordinate question that contains the MOST subordinate questions, some of the data frames generated at this point will have empty columns (i.e., columns whose cells are all `NA`). The reason for this is that the associated super-ordinate questions have fewer actual sub-ordinate question-response pairs than the maximum number denoted by `token_split_destination_cols`. For these situations, columns `q5` and `r5`, for example, will be empty. We drop these empty columns with `janitor::remove_empty("cols")`, thereby "right-sizing" the column count in each output data frame.
 
-Because all of this processing happens within a call of `map()`, the output is a list of data frames, one for each super-ordinate question. Each data frame holds, in discrete columns, the sub-ordinate questions and numerical responses corresponding to a single super-ordinate question.
+Because all of this processing happens within a call of `map()`, the output `list_super_sub_cols` is a list of data frames, one for each super-ordinate question. Each data frame holds, in discrete columns, the sub-ordinate questions and numerical responses corresponding to a single super-ordinate question.
 ```{r freq, echo = 3:14, eval = FALSE}
+```
+In the data frames held by `list_super_sub_cols`, the numerical responses in the `r` columns are formatted as strings. The next code block coerces these strings to integers, so they can be processed into frequency tables in the final output.
+
+We use `map()`, with `list_super_sub_cols` as the `.x` element, to transform one data frame at a time. We feed each data frame to `select(contains("r"))`, thus isolating only the columns containing the numerical responses. Using `mutate(across(everything))` we apply a function to all columns in the `.x` input. The cells of these columns contain numbers formatted as strings. We strip out white space with `str_replace(., " ", "")`, and coerce the result to integer with `base::as.integer()`. The code returns `list_r_cols`, a list of data frames holding the properly formatted numerical response columns for each super-ordinate question.
+```{r freq, echo = 16:23, eval = FALSE}
 ```

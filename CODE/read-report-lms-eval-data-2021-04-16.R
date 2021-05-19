@@ -189,10 +189,6 @@ list_super_sub_cols <- map(
     janitor::remove_empty("cols")
 )
 
-# The cells of the final output need to be the numerical response values to the
-# questions. Next snippet selects() the cols holding these response values,
-# strips out white space, and formats values as integers. Here we are mapping
-# over a list containing dfs, and feeding one data frame per iteration with .x
 list_r_cols <- map(list_super_sub_cols,
                    ~ .x %>%
                      select(contains("r")) %>%
