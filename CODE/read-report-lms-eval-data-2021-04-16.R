@@ -198,16 +198,6 @@ list_r_cols <- map(list_super_sub_cols,
                          as.integer()
                      )))
 
-# In the list of dfs, the sub-question names exist as duplicate cell values in
-# cols, but we need them to be in a vec so they can be used as part of col names
-# on the final output table. We select the sub-question cols, filter only the
-# first row to capture just the names we need without any dups, apply
-# as.character to transform the df row into a vec, strip out whitespace and
-# other garbage text. Note how str_replace_all() can take a vector of strings
-# matched to replacements. Thus it can handle searching for multiple different
-# sttings within a single call. Here we are mapping over a list containing dfs,
-# and feeding one data frame per iteration with .x. Map returns a list of vecs
-# containing the sub-question names associated with each df.
 list_sub_q_names <- map(
   list_super_sub_cols,
   ~ .x %>%
@@ -225,11 +215,6 @@ list_sub_q_names <- map(
       )
     ))
 
-# now we create the vector of col names for output by concatenating the
-# super-ordinate q_name (which gets recycled), with the sub-ordinate q_names. We
-# use map2() to map over a list of char vecs (.x) and a vec (.y). As we iterate
-# and concatenate the col names, the current .y element recycles and gets joined
-# to each of the current .x elements.
 list_col_names <- map2(list_sub_q_names,
                        q_name,
                        ~

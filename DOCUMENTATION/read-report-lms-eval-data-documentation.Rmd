@@ -300,8 +300,16 @@ list_sub_q_names <- map(
     select(contains("q")) %>%
     filter(row_number() == 1) %>%
     as.character() %>%
-    str_replace_all(" ", "_")
-)
+    str_replace_all(" ", "_") %>% 
+    str_replace_all(
+      c(
+        "_Excellent,_" = "",
+        "_Above average,_" = "",
+        "_Average,_" = "",
+        "_Below average,_" = "",
+        "_Poor,_" = ""
+      )
+    ))
 
 list_col_names <- map2(list_sub_q_names,
                        q_name,
@@ -406,4 +414,22 @@ In the data frames held by `list_super_sub_cols`, the numerical responses in the
 
 We use `map()`, with `list_super_sub_cols` as the `.x` element, to transform one data frame at a time. We feed each data frame to `select(contains("r"))`, thus isolating only the columns containing the numerical responses. Using `mutate(across(everything))` we apply a function to all columns in the `.x` input. The cells of these columns contain numbers formatted as strings. We strip out white space with `str_replace(., " ", "")`, and coerce the result to integer with `base::as.integer()`. The code returns `list_r_cols`, a list of data frames holding the properly formatted numerical response columns for each super-ordinate question.
 ```{r freq, echo = 16:23, eval = FALSE}
+```
+In the data frames held by `list_super_sub_cols`, the sub-ordinate question text exists as duplicate cell values in the `q` columns. We need to hold these strings in a vector so they can be used in the column names for the final output. As before, we `map()` over `list_super_sub_cols`, using the `.x` argument to feed one data from at a time to a series of functions that executes the required transformation.
+
+We pass each data frame to `select(contains("q"))`, thus isolating only the columns containing the sub-ordinate question text. Because every cell of these columns contains identical strings, we capture only the first row with `filter(row_number() == 1)`, coercing this single row to a character vector with `as.character()`.
+
+We then use two consecutive calls of `str_replace_all()` to clean up the question text. In the first call, we replace white space `" "` with underscore `"_"`. In the second call, we pass a vector of target-replacement pairs (e.g., `"_Excellent,_" = ""`) to `str_replace_all()`, allowing it to carry out multiple search-and-replace operations.
+
+The enclosing call of `map()` returns a list of character vectors, each containing the cleaned-up sub-ordinate questions associated with a specific super-ordinate question.
+```{r freq, echo = 25:40, eval = FALSE}
+```
+In previous steps, we isolated and reformatted the text of the super- and sub-ordinate questions. The output requires separate columns for the numerical responses to each subordinate question. The names of these columns must include _both_ the sub-ordinate question _and_ its associated super-ordinate question. The next snippet merges pairs of super- and sub-ordinate questions into single strings that can be used as output column names.
+
+To accomplish this we `map2()` over two objects of identical length: `list_sub_q_names`, a list containing (in this example) seven character vectors that hold the sub-ordinate question strings associated with seven super-ordinate questions; and `q_names`, a character vector holding the seven super-ordinate question strings. `map2()` iterates seven times over these objects, each time presenting a `.x` and a `.y` element for processing by the functions that follow. Within each iteration of `.x` and `.y`, `map2()` executes a nested iteration over the elements of `.x`; that is, over the vector of sub-ordinate questions that constitutes each element of `list_sub_q_names`. Within this nested iteration of `.x`, the value of the `.y` element (`q_name`, which holds the super-ordinate questions) recycles (is held constant), thus creating pairs of super-ordinate questions and their associated sub-ordinate questions.
+
+These paired strings are concatenated with `str_c(.y, .x, sep = "_")`, which merges the two strings with an underscore separator. The concatenation unavoidably creates a double-underscore at one position in each string, which we must strip out with `str_replace(., "__", "_"))`, passing `.` to represent the output of the concatenating function.
+
+`map()` thus returns `list_col_names`, which contains seven character vectors, one for each super-ordinate question. The elements of these vectors are the properly formatted, final output column names that combine each sub-ordinate question with its associated super-ordinate question.
+```{r freq, echo = 42:46, eval = FALSE}
 ```
