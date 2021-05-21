@@ -221,14 +221,9 @@ list_col_names <- map2(list_sub_q_names,
                          str_c(.y, .x, sep = "_") %>%
                          str_replace(., "__", "_"))
 
-# we name the cols of numerical responses with the vec of names we just created.
-# As previously, we map2() over the list of col names, and the list of dfs
-# containing the sub question responses. This returns a list of dfs with the
-# cols named as required. We use bind_cols() to bind the separate dfs into a
-# single df.
 named_super_sub_r_cols <- map2(list_r_cols,  list_col_names,
-                                    ~ .x %>%
-                                      set_names(.y)) %>% 
+                               ~ .x %>%
+                                 set_names(.y)) %>%
   bind_cols()
 
 # configure final output

@@ -27,7 +27,7 @@ Overall educational experience: 4 | Above average, Accessibility of platforms/ma
 Overall educational experience: 3 | Average, Accessibility of platforms/material…
 Overall educational experience: 5 | Excellent, Accessibility of platforms/materi…
 ```
-The column name, `Access/Setting/Overall Experience` is a super-ordinate question. Going down the column, the cells contain the sub-ordinate questions (e.g., `Overall educational experience`, `Accessibility of platforms/materials`, etc.), the numerical responses to those sub-ordinate questions, and the text labels corresponding to each numerical response (e.g., `5 | Excellent`. This represents a classic "untidy" data input. The cleanup process creates separate columns for each super- and sub-ordinate question pair, with the rows containing _only_ the numerical responses by person (i.e, without the text labels in the input).
+The column name, `Access/Setting/Overall Experience` is a super-ordinate question. Going down the column, the cells contain the sub-ordinate questions (e.g., `Overall educational experience`, `Accessibility of platforms/materials`, etc.), the numerical responses to those sub-ordinate questions, and the text labels corresponding to each numerical response (e.g., `5 | Excellent`). This represents a classic "untidy" data input. The cleanup process creates separate columns for each super- and sub-ordinate question pair, with the rows containing _only_ the numerical responses by person (i.e, without the text labels in the input).
 
 #### Initial data preparation and cleanup
 
@@ -318,8 +318,8 @@ list_col_names <- map2(list_sub_q_names,
                          str_replace(., "__", "_"))
 
 named_super_sub_r_cols <- map2(list_r_cols,  list_col_names,
-                                    ~ .x %>%
-                                      set_names(.y)) %>% 
+                               ~ .x %>%
+                                 set_names(.y)) %>%
   bind_cols()
 
 output <- bind_cols(
@@ -428,8 +428,13 @@ In previous steps, we isolated and reformatted the text of the super- and sub-or
 
 To accomplish this we `map2()` over two objects of identical length: `list_sub_q_names`, a list containing (in this example) seven character vectors that hold the sub-ordinate question strings associated with seven super-ordinate questions; and `q_names`, a character vector holding the seven super-ordinate question strings. `map2()` iterates seven times over these objects, each time presenting a `.x` and a `.y` element for processing by the functions that follow. Within each iteration of `.x` and `.y`, `map2()` executes a nested iteration over the elements of `.x`; that is, over the vector of sub-ordinate questions that constitutes each element of `list_sub_q_names`. Within this nested iteration of `.x`, the value of the `.y` element (`q_name`, which holds the super-ordinate questions) recycles (is held constant), thus creating pairs of super-ordinate questions and their associated sub-ordinate questions.
 
-These paired strings are concatenated with `str_c(.y, .x, sep = "_")`, which merges the two strings with an underscore separator. The concatenation unavoidably creates a double-underscore at one position in each string, which we must strip out with `str_replace(., "__", "_"))`, passing `.` to represent the output of the concatenating function.
+These paired strings are concatenated with `str_c(.y, .x, sep = "_")`, which merges the two strings with an underscore separator. The concatenation unavoidably creates a double-underscore at one position in each string, which we strip out with `str_replace(., "__", "_"))`, where the `.` argument passes the output of the concatenating function.
 
 `map()` thus returns `list_col_names`, which contains seven character vectors, one for each super-ordinate question. The elements of these vectors are the properly formatted, final output column names that combine each sub-ordinate question with its associated super-ordinate question.
 ```{r freq, echo = 42:46, eval = FALSE}
+```
+At this stage we have separate objects holding the columns of numerical responses to the super-sub-ordinate questions (`list_r_cols`) and the required names for those columns (`list_col_names`). The next task is to combine those objects into a single data frame, attaching the names in `list_col_names` to the columns in `list_r_cols`.
+
+We `map2()` over the two objects, with `.x` holding `list_r_cols`, and `.y` holding `list_col_names`. In each iteration, `.x` supplies a data frame of numerical responses to `set_names()`, which attaches the column names held in `.y`. `map2()` returns a list of data frames whose column names now meet output requirements. By passing this list to `bind_cols()` we return a single data frame, `named_super_sub_r_cols`, which contains all of the super-sub-ordinate question pairs and their numerical responses. This data frame is then processed downstream to create frequency tables.
+```{r freq, echo = 48:51, eval = FALSE}
 ```
