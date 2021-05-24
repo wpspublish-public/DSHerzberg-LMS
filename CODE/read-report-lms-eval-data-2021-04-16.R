@@ -226,8 +226,6 @@ named_super_sub_r_cols <- map2(list_r_cols,  list_col_names,
                                  set_names(.y)) %>%
   bind_cols()
 
-# configure final output
-
 output <- bind_cols(
   lhs_cols,
   date_col,
@@ -236,16 +234,12 @@ output <- bind_cols(
   rhs_text_cols
 )
 
-# write output to .csv
 write_csv(output,
           here("OUTPUT-FILES/lms-output-survey-ados2-workshop-2021-04-16.csv"),
           na = "")
 
-# CREATE FREQ TABLE FOR SUPER-SUB QUESTIONS
 freq_table_super_sub_cols <- output %>% 
-  # filter(`What is your field of work?` == "School Psychology") %>% 
   select(all_of(names(named_super_sub_r_cols))) %>%  
-  # all_of(token_addl_cols_for_freq_counts)) %>% 
   pivot_longer(everything(), names_to = 'item', values_to = 'value') %>% 
   count(item, value) %>% 
   group_by(item) %>% 
@@ -259,10 +253,10 @@ freq_table_super_sub_cols <- output %>%
          valid_cum_pct = round(100*(csum/total), 1),
   ) %>% 
   separate(
-    item,# source col for string to split
-    c("super_q", "sub_q"), # destination cols for split parts of input string
-    ":_", #regex for chars to split on and drop from destination cols
-    remove = TRUE # drop input string
+    item,
+    c("super_q", "sub_q"), 
+    ":_", 
+    remove = TRUE 
   ) %>% 
   # create label var with mutate(case_when()). Using str_detect(), which
   # evaluates to a logical, we can construct predicates that capture multiple

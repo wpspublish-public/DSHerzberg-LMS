@@ -170,7 +170,7 @@ pre code {
 
 <div id="overview" class="section level4">
 <h4>Overview</h4>
-<p>This is a method for reading in output from WPS LMS system, cleaning up and reformatting the data, and producing a report of frequency counts for the course evaluations.</p>
+<p>This is a method for reading output from WPS LMS system, cleaning up and reformatting the data, and producing a report of frequency counts for the course evaluations.</p>
 <p>A key element of cleanup is handling columns that contain super-ordinate questions, sub-ordinate questions, and responses. Here is an example of one such column:</p>
 <pre><code>`Access/Setting/Overall Experience`                               
 
@@ -192,18 +192,18 @@ Overall educational experience: 5 | Excellent, Accessibility of platforms/materi
 <h6>RUNNABLE CODE</h6>
 <pre class="r"><code>suppressMessages(library(here))
 suppressMessages(suppressWarnings(library(tidyverse)))
-suppressMessages(library(xlsx))
+suppressMessages(library(writexl))
 
 input &lt;-
   suppressMessages(read_csv(here(
-    &quot;INPUT-FILES/summary-evaluation-data.csv&quot;
+    &quot;INPUT-FILES/input-survey-ados2-workshop-2021-04-16.csv&quot;
   )))
 
 names_input &lt;- names(input)
-token_super_sub_first_col &lt;- &quot;General Live Webinar Experience&quot;
+token_super_sub_first_col &lt;- &quot;Access/Setting/Overall Experience&quot;
 token_super_sub_last_col &lt;- &quot;Usefulness of Content&quot;
 token_addl_cols_for_freq_counts &lt;- c(&quot;Would you recommend this CE program to others?&quot;, 
-                                     &quot;In general, what format do you prefer for webinars? Choose all that apply:&quot;, 
+                                     &quot;In general, what format do you prefer for webinars?&quot;, 
                                      &quot;In general, what time of day do you prefer to begin a live webinar?&quot;, 
                                      &quot;How did you learn about this CE program?&quot;, 
                                      &quot;What is your highest academic degree?&quot;,
@@ -372,11 +372,11 @@ item_value_label_map &lt;- bind_rows(
 <p>Load libraries and read input data.</p>
 <pre class="r"><code>suppressMessages(library(here))
 suppressMessages(suppressWarnings(library(tidyverse)))
-suppressMessages(library(xlsx))
+suppressMessages(library(writexl))
 
 input &lt;-
   suppressMessages(read_csv(here(
-    &quot;INPUT-FILES/summary-evaluation-data.csv&quot;
+    &quot;INPUT-FILES/input-survey-ados2-workshop-2021-04-16.csv&quot;
   )))</code></pre>
 <p>Initialize tokens representing job-specific elements. These tokens are of three types:</p>
 <ul>
@@ -400,10 +400,10 @@ input &lt;-
 </ul></li>
 </ul>
 <pre class="r"><code>names_input &lt;- names(input)
-token_super_sub_first_col &lt;- &quot;General Live Webinar Experience&quot;
+token_super_sub_first_col &lt;- &quot;Access/Setting/Overall Experience&quot;
 token_super_sub_last_col &lt;- &quot;Usefulness of Content&quot;
 token_addl_cols_for_freq_counts &lt;- c(&quot;Would you recommend this CE program to others?&quot;, 
-                                     &quot;In general, what format do you prefer for webinars? Choose all that apply:&quot;, 
+                                     &quot;In general, what format do you prefer for webinars?&quot;, 
                                      &quot;In general, what time of day do you prefer to begin a live webinar?&quot;, 
                                      &quot;How did you learn about this CE program?&quot;, 
                                      &quot;What is your highest academic degree?&quot;,
@@ -518,8 +518,8 @@ Would you recommend this CE program to others?     2 No   </code></pre>
 <p><br></p>
 </div>
 </div>
-<div id="generate-frequency-table-output" class="section level4">
-<h4>Generate frequency table output</h4>
+<div id="format-columns-for-frequency-table-output" class="section level4">
+<h4>Format columns for frequency table output</h4>
 <div id="runnable-code-1" class="section level6">
 <h6>RUNNABLE CODE</h6>
 <pre class="r"><code>q_name &lt;- str_c(str_replace_all(names(df_super_sub_cols), &quot; &quot;, &quot;_&quot;), &quot;:&quot;)
@@ -578,11 +578,12 @@ output &lt;- bind_cols(
   lhs_cols,
   date_col,
   named_super_sub_r_cols,
-  rhs_cols
+  rhs_num_cols,
+  rhs_text_cols
 )
 
 write_csv(output,
-          here(&quot;OUTPUT-FILES/lms-output.csv&quot;),
+          here(&quot;OUTPUT-FILES/lms-output-survey-ados2-workshop-2021-04-16.csv&quot;),
           na = &quot;&quot;)
 
 school_psych &lt;- output %&gt;% 
@@ -708,11 +709,203 @@ school_psych &lt;- output %&gt;%
                          str_c(.y, .x, sep = &quot;_&quot;) %&gt;%
                          str_replace(., &quot;__&quot;, &quot;_&quot;))</code></pre>
 <p>At this stage we have separate objects holding the columns of numerical responses to the super-sub-ordinate questions (<code>list_r_cols</code>) and the required names for those columns (<code>list_col_names</code>). The next task is to combine those objects into a single data frame, attaching the names in <code>list_col_names</code> to the columns in <code>list_r_cols</code>.</p>
-<p>We <code>map2()</code> over the two objects, with <code>.x</code> holding <code>list_r_cols</code>, and <code>.y</code> holding <code>list_col_names</code>. In each iteration, <code>.x</code> supplies a data frame of numerical responses to <code>set_names()</code>, which attaches the column names held in <code>.y</code>. <code>map2()</code> returns a list of data frames whose column names now meet output requirements. By passing this list to <code>bind_cols()</code> we return a single data frame, <code>named_super_sub_r_cols</code>, which contains all of the super-sub-ordinate question pairs and their numerical responses. This data frame is the processed down stream to create frequency tables.</p>
+<p>We <code>map2()</code> over the two objects, with <code>.x</code> holding <code>list_r_cols</code>, and <code>.y</code> holding <code>list_col_names</code>. In each iteration, <code>.x</code> supplies a data frame of numerical responses to <code>set_names()</code>, which attaches the column names held in <code>.y</code>. <code>map2()</code> returns a list of data frames whose column names now meet output requirements. By passing this list to <code>bind_cols()</code> we return a single data frame, <code>named_super_sub_r_cols</code>, which contains all of the super-sub-ordinate question pairs and their numerical responses.</p>
+<p>In a second call of <code>bind_cols</code>, we join <code>named_super_sub_r_cols</code> with the other cleaned-up columns from the original input, creating <code>output</code>, a data frame that can be processed downstream to create frequency tables. We <code>write_csv(output)</code> to an external .csv file, replacing <code>NA</code> codes with blank space <code>&quot;&quot;</code>.</p>
 <pre class="r"><code>named_super_sub_r_cols &lt;- map2(list_r_cols,  list_col_names,
                                ~ .x %&gt;%
                                  set_names(.y)) %&gt;%
-  bind_cols()</code></pre>
+  bind_cols()
+
+output &lt;- bind_cols(
+  lhs_cols,
+  date_col,
+  named_super_sub_r_cols,
+  rhs_num_cols,
+  rhs_text_cols
+)
+
+write_csv(output,
+          here(&quot;OUTPUT-FILES/lms-output-survey-ados2-workshop-2021-04-16.csv&quot;),</code></pre>
+<p><br></p>
+</div>
+</div>
+<div id="generate-frequency-table-output" class="section level4">
+<h4>Generate frequency table output</h4>
+<div id="runnable-code-2" class="section level6">
+<h6>RUNNABLE CODE</h6>
+<pre class="r"><code>freq_table_super_sub_cols &lt;- output %&gt;% 
+  select(all_of(names(named_super_sub_r_cols))) %&gt;%  
+  pivot_longer(everything(), names_to = &#39;item&#39;, values_to = &#39;value&#39;) %&gt;% 
+  count(item, value) %&gt;% 
+  group_by(item) %&gt;% 
+  complete(value = 1:5) %&gt;% 
+  arrange(desc(value), .by_group = TRUE) %&gt;% 
+  replace_na(list(n = 0)) %&gt;% 
+  mutate(total = sum(n),
+         total_pct = round(100*(n/total), 1),
+         valid_pct = round(100*(n/total), 1),
+         csum = cumsum(n),
+         valid_cum_pct = round(100*(csum/total), 1),
+  ) %&gt;% 
+  separate(
+    item, 
+    c(&quot;super_q&quot;, &quot;sub_q&quot;), 
+    &quot;:_&quot;, 
+    remove = TRUE 
+  ) %&gt;% 
+  mutate(
+    label = case_when(
+      (str_detect(super_q, &quot;Access&quot;) | str_detect(super_q, &quot;Quality_of&quot;)) &amp; value == 5 ~ &quot;Excellent&quot;,
+      (str_detect(super_q, &quot;Access&quot;) | str_detect(super_q, &quot;Quality_of&quot;)) &amp; value == 4 ~ &quot;Above average&quot;,
+      (str_detect(super_q, &quot;Access&quot;) | str_detect(super_q, &quot;Quality_of&quot;)) &amp; value == 3 ~ &quot;Average&quot;,
+      (str_detect(super_q, &quot;Access&quot;) | str_detect(super_q, &quot;Quality_of&quot;)) &amp; value == 2 ~ &quot;Below average&quot;,
+      (str_detect(super_q, &quot;Access&quot;) | str_detect(super_q, &quot;Quality_of&quot;)) &amp; value == 1 ~ &quot;Poor&quot;,
+      str_detect(super_q, &quot;Objectives&quot;) &amp; value == 5 ~ &quot;Strongly agree&quot;,
+      str_detect(super_q, &quot;Objectives&quot;) &amp; value == 4 ~ &quot;Agree&quot;,
+      str_detect(super_q, &quot;Objectives&quot;) &amp; value == 3 ~ &quot;Neutral&quot;,
+      str_detect(super_q, &quot;Objectives&quot;) &amp; value == 2 ~ &quot;Disagree&quot;,
+      str_detect(super_q, &quot;Objectives&quot;) &amp; value == 1 ~ &quot;Strongly disagree&quot;,
+      str_detect(super_q, &quot;Self-Evaluation&quot;) &amp; value == 5 ~ &quot;A great deal&quot;,
+      str_detect(super_q, &quot;Self-Evaluation&quot;) &amp; value == 4 ~ &quot;More than average&quot;,
+      str_detect(super_q, &quot;Self-Evaluation&quot;) &amp; value == 3 ~ &quot;Average&quot;,
+      str_detect(super_q, &quot;Self-Evaluation&quot;) &amp; value == 2 ~ &quot;Less than average&quot;,
+      str_detect(super_q, &quot;Self-Evaluation&quot;) &amp; value == 1 ~ &quot;Very little&quot;,
+      str_detect(super_q, &quot;Usefulness_of&quot;) &amp; value == 5 ~ &quot;Extremely useful&quot;,
+      str_detect(super_q, &quot;Usefulness_of&quot;) &amp; value == 4 ~ &quot;A good deal useful&quot;,
+      str_detect(super_q, &quot;Usefulness_of&quot;) &amp; value == 3 ~ &quot;Somewhat useful&quot;,
+      str_detect(super_q, &quot;Usefulness_of&quot;) &amp; value == 2 ~ &quot;A little useful&quot;,
+      str_detect(super_q, &quot;Usefulness_of&quot;) &amp; value == 1 ~ &quot;Not useful&quot;,
+      TRUE ~ NA_character_
+    )
+  ) %&gt;% 
+  mutate(
+    super_q = case_when(
+      lag(super_q) == super_q  ~ NA_character_,
+      TRUE ~ super_q
+    ),
+    sub_q = case_when(
+      lag(sub_q) == sub_q  ~ NA_character_,
+      TRUE ~ sub_q
+    ),
+    across(c(total_pct, valid_pct, valid_cum_pct), ~ format(., digits = 1, nsmall = 1)) 
+  ) %&gt;%
+  select(super_q, sub_q, value, label, n, total_pct, valid_pct, valid_cum_pct, total) %&gt;% 
+  rename(freq = n) %&gt;% 
+  mutate(across(everything(), ~ replace_na(., &quot;&quot;)))
+
+freq_table_rhs_num_cols &lt;- rhs_num_cols %&gt;% 
+  pivot_longer(everything(), names_to = &#39;item&#39;, values_to = &#39;value&#39;) %&gt;% 
+  count(item,value) %&gt;% 
+  rename(label = value) %&gt;% 
+  right_join(item_value_label_map, by = c(&quot;item&quot;, &quot;label&quot;)) %&gt;%
+  relocate(value, .after = item) %&gt;% 
+  group_by(item) %&gt;% 
+  arrange(desc(value), .by_group = TRUE) %&gt;% 
+  replace_na(list(n = 0)) %&gt;% 
+  mutate(total = sum(n),
+         total_pct = round(100*(n/total), 1),
+         valid_pct = round(100*(n/total), 1),
+         csum = cumsum(n),
+         valid_cum_pct = round(100*(csum/total), 1),
+  ) %&gt;% 
+  ungroup() %&gt;% 
+  mutate(
+    item = case_when(
+      lag(item) == item  ~ NA_character_,
+      TRUE ~ item
+    ), 
+    across(c(total_pct, valid_pct, valid_cum_pct), ~ format(., digits = 1, nsmall = 1)) 
+  ) %&gt;%
+  select(item, value, label, n, total_pct, valid_pct, valid_cum_pct, total) %&gt;% 
+  rename(super_q = item, freq = n) %&gt;% 
+  mutate(across(super_q, ~ replace_na(., &quot;&quot;)),
+         sub_q = NA_character_,
+         across(c(value, freq, total), ~ as.character(.))
+  ) %&gt;% 
+  relocate(sub_q, .after = &quot;super_q&quot;)
+
+freq_table_all &lt;- bind_rows(
+  freq_table_super_sub_cols,
+  freq_table_rhs_num_cols
+)
+
+text_cols_all &lt;- bind_cols(
+  lhs_cols,
+  date_col,
+  rhs_text_cols
+)
+
+write_xlsx(
+  list(`text responses` = text_cols_all, `freq tables` = freq_table_all),
+  here(&quot;OUTPUT-FILES/lms-report-survey-ados2-workshop-2021-04-16.xlsx&quot;)
+)</code></pre>
+<p><br></p>
+</div>
+<div id="commented-snippets-2" class="section level6">
+<h6>COMMENTED SNIPPETS</h6>
+<p>Within <code>output</code>, there are two sets of columns to be processed for frequency table output:</p>
+<ul>
+<li><code>named_super_sub_r_cols</code>: columns containing the numerical responses to super-sub-ordinate question pairs;</li>
+<li><code>rhs_num_cols</code>: other columns from the input containing numerical responses.</li>
+</ul>
+<p>The code generates separate frequency tables for these two column sets, and then joins them together with other output in the final report.</p>
+<p>In the first snippet, <code>freq_table_super_sub_cols</code> designates the frequency table for the super-sub-ordinate questions. We extract the names of the relevant columns into a character vector with <code>names(named_super_sub_r_cols)</code>, and segregate the columns for analysis by wrapping their names in <code>select(all_of())</code>.</p>
+<p><code>tidyr::pivot_longer()</code> transforms the data object from wide to long (nested) format. The arguments to <code>pivot_longer()</code> include the tidyselect helper <code>everything()</code>, which indicates that all columns will be included in the transformation, and the names of the new destination columns for the input column names (<code>names_to</code>) and the input cell values (<code>values_to</code>). <code>pivot_longer()</code> returns a nested data frame with two columns, <code>item</code> and <code>value</code>. In this long object, the items and their respective response values are nested within each case (person row) of the input, running down the rows for one person and then repeating the same items for the next person, and so on.</p>
+<p><code>dplyr::count()</code> summarizes this object. Passing <code>item</code> and <code>value</code> as arguments groups the summary object by these two variables, such that a new column <code>n</code> provides the person count for each pairing of item and response value.</p>
+<pre class="r"><code>freq_table_super_sub_cols &lt;- output %&gt;% 
+  select(all_of(names(named_super_sub_r_cols))) %&gt;%  
+  pivot_longer(everything(), names_to = &#39;item&#39;, values_to = &#39;value&#39;) %&gt;% 
+  count(item, value) %&gt;% </code></pre>
+<p>Here are the first 10 rows of the summary table.</p>
+<pre><code>   item                                                              value     n
+
+ 1 Access/Setting/Overall_Experience:_Accessibility_of_platforms/ma…     3     7
+ 2 Access/Setting/Overall_Experience:_Accessibility_of_platforms/ma…     4     7
+ 3 Access/Setting/Overall_Experience:_Accessibility_of_platforms/ma…     5    20
+ 4 Access/Setting/Overall_Experience:_Accessing_the_webinar_(e.g.,_…     3     3
+ 5 Access/Setting/Overall_Experience:_Accessing_the_webinar_(e.g.,_…     4     7
+ 6 Access/Setting/Overall_Experience:_Accessing_the_webinar_(e.g.,_…     5    24
+ 7 Access/Setting/Overall_Experience:_Clarity_and_timeliness_of_inf…     3     6
+ 8 Access/Setting/Overall_Experience:_Clarity_and_timeliness_of_inf…     4     8
+ 9 Access/Setting/Overall_Experience:_Clarity_and_timeliness_of_inf…     5    20
+10 Access/Setting/Overall_Experience:_Overall_educational_experience     3     3</code></pre>
+<p>The range of possible response values for the super-sub-ordinate questions is <code>1</code> to <code>5</code>. In the questions shown in the this example, no person chose responses <code>1</code> or <code>2</code>, so there are no rows corresponding to these two numerical responses. We must nevertheless report the person counts for <code>1</code> and <code>2</code> in the frequency table output. We use <code>tidyr::complete(value = 1:5)</code> to create rows for any numerical responses not chosen by person. <code>group_by(item)</code> ensures that missing rows are created separately for each unique value of <code>item</code>.</p>
+<pre class="r"><code>  group_by(item) %&gt;% 
+  complete(value = 1:5) %&gt;% </code></pre>
+<p>The newly created rows appear in the next example. Each question now has five rows corresponding to the five possible response choices.</p>
+<pre><code>   item                                                              value     n
+
+ 1 Access/Setting/Overall_Experience:_Accessibility_of_platforms/ma…     1    NA
+ 2 Access/Setting/Overall_Experience:_Accessibility_of_platforms/ma…     2    NA
+ 3 Access/Setting/Overall_Experience:_Accessibility_of_platforms/ma…     3     7
+ 4 Access/Setting/Overall_Experience:_Accessibility_of_platforms/ma…     4     7
+ 5 Access/Setting/Overall_Experience:_Accessibility_of_platforms/ma…     5    20
+ 6 Access/Setting/Overall_Experience:_Accessing_the_webinar_(e.g.,_…     1    NA
+ 7 Access/Setting/Overall_Experience:_Accessing_the_webinar_(e.g.,_…     2    NA
+ 8 Access/Setting/Overall_Experience:_Accessing_the_webinar_(e.g.,_…     3     3
+ 9 Access/Setting/Overall_Experience:_Accessing_the_webinar_(e.g.,_…     4     7
+10 Access/Setting/Overall_Experience:_Accessing_the_webinar_(e.g.,_…     5    24</code></pre>
+<p>The next snippet applies further modifications to the output. <code>arrange()</code> sorts the table in <code>desc()</code> order by <code>value</code>, retaining the existing group structure (<code>.by_group = TRUE</code>) so that sorting on response value is executed <em>within</em> each item’s five response-value rows. In the summary table, the substantive meaning of <code>NA</code> is <code>0</code> person responses. We use <code>tidyr::replace_na()</code> to recode <code>NA</code> to <code>0</code>, by passing a list of columns and replacement values (<code>list(n = 0)</code>). <code>mutate()</code> creates new columns (e.g., <code>total_pct</code>, <code>valid_pct</code>, etc.) that are needed for the final output. We wrap variable definitions in <code>round()</code> to apply required numerical formatting.</p>
+<pre class="r"><code>  arrange(desc(value), .by_group = TRUE) %&gt;% 
+  replace_na(list(n = 0)) %&gt;% 
+  mutate(total = sum(n),
+         total_pct = round(100*(n/total), 1),
+         valid_pct = round(100*(n/total), 1),
+         csum = cumsum(n),
+         valid_cum_pct = round(100*(csum/total), 1),
+  ) %&gt;% </code></pre>
+<p>In the current data object, super- and subordinate question pairs exist as a single long string in the <code>item</code> column. The frequency table output requires that each element of the pair reside in its own column. As described previously, we call call <code>tidyr::separate()</code> to divide up these long strings and send them to discrete destination columns. Here, the third argument specifies that the strings in <code>item</code> will be split on the string <code>:_</code> (which will be dropped), and the resulting substrings will be saved in the <code>&quot;super_q&quot;</code> and <code>&quot;sub_q&quot;</code> columns.</p>
+<pre class="r"><code>  separate(
+    item, 
+    c(&quot;super_q&quot;, &quot;sub_q&quot;), 
+    &quot;:_&quot;, 
+    remove = TRUE 
+  ) %&gt;% </code></pre>
+<p>In the current data object, <code>n</code> provides the person counts for each of the possible numerical responses in <code>value</code>. To make the frequency table output easier to interpret, we need to attach value lables to numerical responses. This task is complicated by the existence of several different sets of labels, across the super-ordinate question groups, corresponding to the five numerical response choices. The solution requires hard-coded response-label maps, but we can use <code>stringr</code> functions to make the code more concise.</p>
+<p>The next snippet shows how this coding is accomplished within <code>mutate(case_when())</code>. We create a new column <code>label</code>, and populate it with values that correspond to certain combinations of super-ordinate questions and response values. These combinations are are expressed in predicates evaluated by <code>case_when()</code>. The complet predicate in the next snippet is <code>(str_detect(super_q, &quot;Access&quot;) | str_detect(super_q, &quot;Quality_of&quot;)) &amp; value == 5</code>. Here, <code>stringr::str_detect()</code> returns <code>TRUE</code> when the string in <code>super_q</code> contains the substring <code>&quot;Access&quot;</code>. This substring identifies a certain super-ordinate question, allowing <code>str_detect()</code> to identify all rows containing that question without having to hard-code the entire long text of the question. The predicate in the snippet thus returns <code>TRUE</code> for <em>two</em> super-ordinate questions that share the same response mappings (two calls of <code>str_detect()</code> joined with the conjunctive operator <code>|</code>), and codes <code>label</code> with <code>&quot;Excellent&quot;</code> in any rows, within either of the two super-ordinate question, where <code>value == 5</code>.</p>
+<pre class="r"><code>  mutate(
+    label = case_when(
+      (str_detect(super_q, &quot;Access&quot;) | str_detect(super_q, &quot;Quality_of&quot;)) &amp; value == 5 ~ &quot;Excellent&quot;,</code></pre>
 </div>
 </div>
 <div class="footnotes">
