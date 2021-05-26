@@ -901,15 +901,40 @@ write_xlsx(
     &quot;:_&quot;, 
     remove = TRUE 
   ) %&gt;% </code></pre>
-<p>In the current data object, <code>n</code> provides the person counts for each of the possible numerical responses in <code>value</code>. The output requirements include attaching substantive value labels (e.g., <code>Excellent</code>, <code>Somewhat useful</code>, <code>Very little</code>, etc.) to the numerical responses. This task is complicated by the existence of several different sets of labels, across the super-ordinate question groups, corresponding to the five numerical response choices. The solution requires hard-coded response-label maps, but we can use <code>stringr</code> functions to make the code more concise.</p>
+<p>In the current data object, <code>n</code> provides the person counts for each of the possible numerical responses in <code>value</code>. The output requirements include attaching substantive value labels (e.g., <code>Excellent</code>, <code>Somewhat useful</code>, <code>Very little</code>, etc.) to the numerical responses. This task is complicated by the existence of several different sets of labels, across the super-ordinate question groups, corresponding to the five numerical response choices. The solution requires hard-coded value-label maps, but we can use <code>stringr</code> functions to make the code more concise.</p>
 <p>We use <code>mutate(case_when())</code> to execute this labeling process, creating a new column <code>label</code>, and populating it with value labels (strings) that correspond to certain combinations of super-ordinate questions and response values. These combinations are are expressed in predicates evaluated by <code>case_when()</code>.</p>
 <p>The next snippet includes the predicate:</p>
-<p><code>(str_detect(super_q, &quot;Access&quot;) | str_detect(super_q, &quot;Quality_of&quot;)) &amp; value == 5</code>.</p>
-<p>Here, two calls of <code>str_detect()</code> are joined with the conjunctive operator <code>|</code>, allowing the predicate to return <code>TRUE</code> for any rows where the substrings <code>&quot;Access&quot;</code> or <code>&quot;Quality of&quot;</code> appear in the <code>super_q</code> column. <code>str_detect()</code> shortens the code by enabling the identification of certain super-ordinate questions, without having to hard-code the lengthy full text of those questions.</p>
-<p>Adding a disjunctive clause with the <code>&amp;</code> operator permits the predicate to further isolate only rows where <code>value == 5</code>, and to code <code>label</code> with <code>&quot;Excellent&quot;</code> in these rows.</p>
+<p><code>((str_detect(super_q, &quot;Access&quot;) | str_detect(super_q, &quot;Quality_of&quot;)) &amp; value == 5</code></p>
+<p>Which operates as follows:</p>
+<ul>
+<li><code>(str_detect(super_q, &quot;Access&quot;)</code>: returns <code>TRUE</code> for any row where the string in the <code>super_q</code> column contains the substring <code>&quot;Access&quot;</code>. This substring uniquely identifies a certain super-ordinate question, without having to hard-code the lengthy full text of that question.</li>
+<li><code>(str_detect(super_q, &quot;Quality of&quot;)</code>: returns <code>TRUE</code> for any row where the string in the <code>super_q</code> column contains the substring <code>&quot;Quality of&quot;</code>. A second super-ordinate question is thus uniquely identified.</li>
+<li><code>|</code>: the disjunctive operator joins the two calls of <code>str_detec()</code>, so that the compound predicate returns <code>TRUE</code> for any row contain <em>either</em> of the two substrings, and, consequently, either of two subordinate questions that share the same value-label mapping. Thus, another coding efficiency is gained: one set of predicates can be used to apply a certain value-label mapping to all of the super-ordinate questions with which it is associated.</li>
+<li><code>&amp; value == 5</code>: a conjunctive clause is added so that a certain label is applied only to the rows where <code>value == 5</code>, within the subset of rows identified by the preceding clause of the predicate.</li>
+</ul>
+<p>The predicate constitutes the LHS of the expression evaluated by <code>case_when()</code>. The RHS of this expression is <code>~ &quot;Excellent&quot;</code>, which codes <code>label</code> with <code>&quot;Excellent&quot;</code>, but only in the rows isolated by the predicate.</p>
 <pre class="r"><code>  mutate(
     label = case_when(
       (str_detect(super_q, &quot;Access&quot;) | str_detect(super_q, &quot;Quality_of&quot;)) &amp; value == 5 ~ &quot;Excellent&quot;,</code></pre>
+<p>We can apply column-wise formatting to make the frequency table output more readable. Here is an example of the desired final output:</p>
+<pre><code>  super_q      sub_q         value label  freq  total_pct valid_pct valid_cum_pct total
+
+ Access/Set… Accessibi… 5     Excel…      20    58.8      58.8      58.8          34   
+                        4     Above…      7     20.6      20.6      79.4          34   
+                        3     Avera…      7     20.6      20.6     100.0          34   
+                        2     Below…      0      0.0       0.0     100.0          34   
+                        1     Poor        0      0.0       0.0     100.0          34   
+            Accessing_… 5     Excel…      24    70.6      70.6      70.6          34   
+                        4     Above…      7     20.6      20.6      91.2          34   
+                        3     Avera…      3      8.8       8.8     100.0          34   
+                        2     Below…      0      0.0       0.0     100.0          34   
+                        1     Poor        0      0.0       0.0     100.0          34  </code></pre>
+<p>Note that in the <code>super_q</code> column, the question text appears only once. In the current data object, that text appears in every cell of the <code>super_q</code> column, which clutters the table. The next snippet uses <code>mutate(case_when())</code> to recode the <code>super_q</code> column to <code>NA</code> in every cell except the one where it is needed to concisely label the rows.</p>
+<pre class="r"><code>  mutate(
+    super_q = case_when(
+      lag(super_q) == super_q  ~ NA_character_,
+      TRUE ~ super_q
+    ),</code></pre>
 </div>
 </div>
 <div class="footnotes">

@@ -613,16 +613,40 @@ The next snippet applies further modifications to the output. `arrange()` sorts 
 In the current data object, super- and subordinate question pairs exist as a single long string in the `item` column. The frequency table output requires that each element of the pair reside in its own column. As described previously, we call call `tidyr::separate()` to divide up these long strings and send them to discrete destination columns. Here, the third argument specifies that the strings in `item` will be split on the string `:_` (which will be dropped), and the resulting substrings will be saved in the `"super_q"` and `"sub_q"` columns.
 ```{r freq, echo = 15:20, eval = FALSE}
 ```
-In the current data object, `n` provides the person counts for each of the possible numerical responses in `value`. The output requirements include attaching substantive value labels (e.g., `Excellent`, `Somewhat useful`, `Very little`, etc.) to the numerical responses. This task is complicated by the existence of several different sets of labels, across the super-ordinate question groups, corresponding to the five numerical response choices. The solution requires hard-coded response-label maps, but we can use `stringr` functions to make the code more concise.
+In the current data object, `n` provides the person counts for each of the possible numerical responses in `value`. The output requirements include attaching substantive value labels (e.g., `Excellent`, `Somewhat useful`, `Very little`, etc.) to the numerical responses. This task is complicated by the existence of several different sets of labels, across the super-ordinate question groups, corresponding to the five numerical response choices. The solution requires hard-coded value-label maps, but we can use `stringr` functions to make the code more concise.
 
 We use `mutate(case_when())` to execute this labeling process, creating a new column `label`, and populating it with value labels (strings) that correspond to certain combinations of super-ordinate questions and response values. These combinations are are expressed in predicates evaluated by `case_when()`. 
 
 The next snippet includes the predicate:
 
-`(str_detect(super_q, "Access") | str_detect(super_q, "Quality_of")) & value == 5`. 
+`((str_detect(super_q, "Access") | str_detect(super_q, "Quality_of")) & value == 5`
 
-Here, two calls of `str_detect()` are joined with the conjunctive operator `|`, allowing the predicate to return `TRUE` for any rows where the substrings `"Access"` or `"Quality of"` appear in the `super_q` column. `str_detect()` shortens the code by enabling the identification of certain super-ordinate questions, without having to hard-code the lengthy full text of those questions.
+Which operates as follows:
 
-Adding a disjunctive clause with the `&` operator permits the predicate to further isolate only rows where `value == 5`, and to code `label` with `"Excellent"` in these rows.
+* `(str_detect(super_q, "Access")`: returns `TRUE` for any row where the string in the `super_q` column contains the substring `"Access"`. This substring uniquely identifies a certain super-ordinate question, without having to hard-code the lengthy full text of that question.
+* `(str_detect(super_q, "Quality of")`: returns `TRUE` for any row where the string in the `super_q` column contains the substring `"Quality of"`. A second super-ordinate question is thus uniquely identified.
+* `|`: the disjunctive operator joins the two calls of `str_detec()`, so that the compound predicate returns `TRUE` for any row contain _either_ of the two substrings, and, consequently, either of two subordinate questions that share the same value-label mapping. Thus, another coding efficiency is gained: one set of predicates can be used to apply a certain value-label mapping to all of the super-ordinate questions with which it is associated.
+* `& value == 5`: a conjunctive clause is added so that a certain label is applied only to the rows where `value == 5`, within the subset of rows identified by the preceding clause of the predicate.
+
+The predicate constitutes the LHS of the expression evaluated by `case_when()`. The RHS of this expression is `~ "Excellent"`, which codes `label` with `"Excellent"`, but only in the rows isolated by the predicate.
 ```{r freq, echo = 21:23, eval = FALSE}
+```
+We can apply column-wise formatting to make the frequency table output more readable. Here is an example of the desired final output:
+
+```
+  super_q      sub_q         value label  freq  total_pct valid_pct valid_cum_pct total
+
+ Access/Set… Accessibi… 5     Excel…      20    58.8      58.8      58.8          34   
+                        4     Above…      7     20.6      20.6      79.4          34   
+                        3     Avera…      7     20.6      20.6     100.0          34   
+                        2     Below…      0      0.0       0.0     100.0          34   
+                        1     Poor        0      0.0       0.0     100.0          34   
+            Accessing_… 5     Excel…      24    70.6      70.6      70.6          34   
+                        4     Above…      7     20.6      20.6      91.2          34   
+                        3     Avera…      3      8.8       8.8     100.0          34   
+                        2     Below…      0      0.0       0.0     100.0          34   
+                        1     Poor        0      0.0       0.0     100.0          34  
+```
+Note that in the `super_q` column, the question text appears only once. In the current data object, that text appears in every cell of the `super_q` column, which clutters the table. The next snippet uses `mutate(case_when())` to recode the `super_q` column to `NA` in every cell except the one where it is needed to concisely label its associated rows.
+```{r freq, echo = 46:50, eval = FALSE}
 ```

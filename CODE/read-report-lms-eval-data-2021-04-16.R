@@ -258,9 +258,6 @@ freq_table_super_sub_cols <- output %>%
     ":_", 
     remove = TRUE 
   ) %>% 
-  # create label var with mutate(case_when()). Using str_detect(), which
-  # evaluates to a logical, we can construct predicates that capture multiple
-  # different row values that share a common substring (e.g., "Access")
   mutate(
     label = case_when(
       (str_detect(super_q, "Access") | str_detect(super_q, "Quality_of")) & value == 5 ~ "Excellent",
