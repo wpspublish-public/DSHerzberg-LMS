@@ -503,7 +503,7 @@ freq_table_super_sub_cols <- output %>%
       lag(sub_q) == sub_q  ~ NA_character_,
       TRUE ~ sub_q
     ),
-    across(c(total_pct, valid_pct, valid_cum_pct), ~ format(., digits = 1, nsmall = 1)) 
+    across(c(total_pct, valid_pct, valid_cum_pct), ~ format(., nsmall = 1)) 
   ) %>%
   select(super_q, sub_q, value, label, n, total_pct, valid_pct, valid_cum_pct, total) %>% 
   rename(freq = n) %>% 
@@ -530,7 +530,7 @@ freq_table_rhs_num_cols <- rhs_num_cols %>%
       lag(item) == item  ~ NA_character_,
       TRUE ~ item
     ), 
-    across(c(total_pct, valid_pct, valid_cum_pct), ~ format(., digits = 1, nsmall = 1)) 
+    across(c(total_pct, valid_pct, valid_cum_pct), ~ format(., nsmall = 1)) 
   ) %>%
   select(item, value, label, n, total_pct, valid_pct, valid_cum_pct, total) %>% 
   rename(super_q = item, freq = n) %>% 
@@ -647,6 +647,21 @@ We can apply column-wise formatting to make the frequency table output more read
                         2     Below…      0      0.0       0.0     100.0          34   
                         1     Poor        0      0.0       0.0     100.0          34  
 ```
-Note that in the `super_q` column, the question text appears only once. In the current data object, that text appears in every cell of the `super_q` column, which clutters the table. The next snippet uses `mutate(case_when())` to recode the `super_q` column to `NA` in every cell except the one where it is needed to concisely label its associated rows.
+Note that in the `super_q` column, the question text appears only once. In the current data object, that text appears in every cell of the `super_q` column, which clutters the table. The next snippet uses `mutate(case_when())` to recode the `super_q` column to `NA` in every cell except the one where it is needed to concisely label its associated rows. 
+
+As previously, we use a logical test to identify the rows to recode. Here that test is expressed in the predicate `lag(super_q) == super_q`, which returns `TRUE` for all rows where the value of a cell in `super_q` is identical to the value of the immediately preceding cell. The only row where that predicate returns `FALSE` is the first row-wise instance of a particular super-ordinate question. For those first instances, the preceding cell is either a different super-ordinate question, or `NA` (in the first cell at the top of the column). `TRUE ~ super_q` is the "else" condition,  indicates that when the predicate returns `FALSE`, the existing value of `super_q` is retained. 
+
+The end result is that the question text is retained in `super_q` only where it first appears, at the top of the set of rows that are associated with that particular super_ordinate question. `super_q` is cleared of values in the remainder of that set of rows, creating a more readable table.
 ```{r freq, echo = 46:50, eval = FALSE}
+```
+Within `mutate()`, `across()` designates a subset of columns to receive the same formatting or other functional processing. In the next snippet, we format the three `_pct` columns, listing them in a vector that is the first argument to `across()`. The second argument to `across()` is the formatting function, set off with the formula notation `~`.
+
+Here we use `base::format()` to ensure that percentages will display with one digit to the right of the decimal point. The arguments to `format()` are:
+
+* `.`: a stand-in for the columns identified by the first argument to `across()`;
+* `nsmall = 1`: minimum number of digits to display to the right of the decimal point.
+```{r freq, echo = 55:56, eval = FALSE}
+```
+The remainder of this code block completes the formatting of the frequency table output, including the selection and sequencing of desired columns for output, renaming variables, and using `mutate(across(everything))` to `replace_na()` with blank space `""` in all columns.
+```{r freq, echo = 57:59, eval = FALSE}
 ```

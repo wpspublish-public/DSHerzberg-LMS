@@ -292,8 +292,7 @@ freq_table_super_sub_cols <- output %>%
       lag(sub_q) == sub_q  ~ NA_character_,
       TRUE ~ sub_q
     ),
-    # format ensures pct will print with 2 digits right of decimal
-    across(c(total_pct, valid_pct, valid_cum_pct), ~ format(., digits = 1, nsmall = 1)) 
+    across(c(total_pct, valid_pct, valid_cum_pct), ~ format(., nsmall = 1)) 
   ) %>%
   select(super_q, sub_q, value, label, n, total_pct, valid_pct, valid_cum_pct, total) %>% 
   rename(freq = n) %>% 
@@ -329,7 +328,7 @@ freq_table_rhs_num_cols <- rhs_num_cols %>%
       lag(item) == item  ~ NA_character_,
       TRUE ~ item
     ), 
-    across(c(total_pct, valid_pct, valid_cum_pct), ~ format(., digits = 1, nsmall = 1)) 
+    across(c(total_pct, valid_pct, valid_cum_pct), ~ format(., nsmall = 1)) 
     # format ensures pct will print with 1 digit right of decimal
   ) %>%
   select(item, value, label, n, total_pct, valid_pct, valid_cum_pct, total) %>% 
