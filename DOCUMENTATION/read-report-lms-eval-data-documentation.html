@@ -584,57 +584,7 @@ output &lt;- bind_cols(
 
 write_csv(output,
           here(&quot;OUTPUT-FILES/lms-output-survey-ados2-workshop-2021-04-16.csv&quot;),
-          na = &quot;&quot;)
-
-school_psych &lt;- output %&gt;% 
-  filter(`What is your field of work?` == &quot;School Psychology&quot;) %&gt;% 
-  select(all_of(names(named_super_sub_r_cols))) %&gt;% 
-  pivot_longer(everything(), names_to = &#39;item&#39;, values_to = &#39;value&#39;) %&gt;% 
-  count(item, value) %&gt;% 
-  group_by(item) %&gt;% 
-  complete(value = 1:5) %&gt;% 
-  arrange(desc(value), .by_group = TRUE) %&gt;% 
-  replace_na(list(n = 0)) %&gt;% 
-  mutate(total = sum(n),
-         total_pct = round(100*(n/total), 1),
-         valid_pct = round(100*(n/total), 1),
-         csum = cumsum(n),
-         valid_cum_pct = round(100*(csum/total), 1),
-  ) %&gt;% 
-  separate(
-    item,
-    c(&quot;super_q&quot;, &quot;sub_q&quot;),
-    &quot;:_&quot;,
-    remove = TRUE
-  ) %&gt;% mutate(
-    super_q = case_when(
-      lag(super_q) == super_q  ~ NA_character_,
-      TRUE ~ super_q
-    ),
-    sub_q = case_when(
-      lag(sub_q) == sub_q  ~ NA_character_,
-      TRUE ~ sub_q
-    ),
-    label = case_when(
-      value == 5 ~ &quot;excellent&quot;,
-      value == 4 ~ &quot;above average&quot;,
-      value == 3 ~ &quot;average&quot;,
-      value == 2 ~ &quot;below average&quot;,
-      value == 1 ~ &quot;poor&quot;,
-      TRUE ~ NA_character_
-    ),
-    across(c(total_pct, valid_pct, valid_cum_pct), ~ format(., digits = 1, nsmall = 1))
-    ) %&gt;%
-  select(super_q, sub_q, value, label, n, total_pct, valid_pct, valid_cum_pct, total) %&gt;% 
-  rename(freq = n) %&gt;% 
-  as.data.frame() %&gt;%
-  mutate(across(everything(), ~ replace_na(., &quot;&quot;))) %&gt;% 
-  write.xlsx(
-    here(&quot;OUTPUT-FILES/school-psych-report.xlsx&quot;),
-    sheetName = &quot;school_psych&quot;,
-    row.names = FALSE,
-    append = FALSE
-  )</code></pre>
+          na = &quot;&quot;)</code></pre>
 <p><br></p>
 </div>
 <div id="commented-snippets-1" class="section level6">
@@ -930,17 +880,17 @@ write_xlsx(
                         2     Below…      0      0.0       0.0     100.0          34   
                         1     Poor        0      0.0       0.0     100.0          34  </code></pre>
 <p>Note that in the <code>super_q</code> column, the question text appears only once. In the current data object, that text appears in every cell of the <code>super_q</code> column, which clutters the table. The next snippet uses <code>mutate(case_when())</code> to recode the <code>super_q</code> column to <code>NA</code> in every cell except the one where it is needed to concisely label its associated rows.</p>
-<p>As previously, we use a logical test to identify the rows to recode. Here that test is expressed in the predicate <code>lag(super_q) == super_q</code>, which returns <code>TRUE</code> for all rows where the value of a cell in <code>super_q</code> is identical to the value of the immediately preceding cell. The only row where that predicate returns <code>FALSE</code> is the first row-wise instance of a particular super-ordinate question. For those first instances, the preceding cell is either a different super-ordinate question, or <code>NA</code> (in the first cell at the top of the column). <code>TRUE ~ super_q</code> is the “else” condition, indicates that when the predicate returns <code>FALSE</code>, the existing value of <code>super_q</code> is retained.</p>
-<p>The end result is that the question text is retained in <code>super_q</code> only where it first appears, at the top of the set of rows that are associated with that particular super_ordinate question. <code>super_q</code> is cleared of values in the remainder of that set of rows, creating a more readable table.</p>
+<p>As previously, we use a logical test to identify the rows to recode. Here that test is expressed in the predicate <code>lag(super_q) == super_q</code>, which returns <code>TRUE</code> for rows where the value of a cell in <code>super_q</code> is identical to the value of the immediately preceding cell. The only row where that predicate returns <code>FALSE</code> is the first instance of a particular super-ordinate question. For those first instances, the preceding cell is either a different super-ordinate question, or <code>NA</code> (in the first cell at the top of the column, where there is no preceding cell). <code>TRUE ~ super_q</code> is the “else” condition, indicating (counter-intuitively) that when the predicate returns <code>FALSE</code>, the existing value of <code>super_q</code> is retained.</p>
+<p>The end result is that the question text is retained in <code>super_q</code> only where it first appears, at the top of the set of rows that are associated with that particular super-ordinate question. The <code>super_q</code> column is cleared of values in the remainder of that set of rows, creating a more readable table.</p>
 <pre class="r"><code>  mutate(
     super_q = case_when(
       lag(super_q) == super_q  ~ NA_character_,
       TRUE ~ super_q
     ),</code></pre>
-<p>Within <code>mutate()</code>, <code>across()</code> designates a subset of columns to receive the same formatting or other functional processing. In the next snippet, we format the three <code>_pct</code> columns, listing them in a vector that is the first argument to <code>across()</code>. The second argument to <code>across()</code> is the formatting function, set off with the formula notation <code>~</code>.</p>
+<p>Within <code>mutate()</code>, <code>across()</code> designates a subset of columns to receive the same formatting or other functional processing. In the next snippet, we format the three <code>_pct</code> columns, identifying them in a vector that is the first argument to <code>across()</code>. The second argument to <code>across()</code> is the formatting function, set off with the formula notation <code>~</code>.</p>
 <p>Here we use <code>base::format()</code> to ensure that percentages will display with one digit to the right of the decimal point. The arguments to <code>format()</code> are:</p>
 <ul>
-<li><code>.</code>: a stand-in for the columns identified by the first argument to <code>across()</code>;</li>
+<li><code>.</code>: a stand-in for the columns identified by <code>c(total_pct, valid_pct, valid_cum_pct)</code>;</li>
 <li><code>nsmall = 1</code>: minimum number of digits to display to the right of the decimal point.</li>
 </ul>
 <pre class="r"><code>    across(c(total_pct, valid_pct, valid_cum_pct), ~ format(., nsmall = 1)) 
@@ -949,6 +899,14 @@ write_xlsx(
 <pre class="r"><code>  select(super_q, sub_q, value, label, n, total_pct, valid_pct, valid_cum_pct, total) %&gt;% 
   rename(freq = n) %&gt;% 
   mutate(across(everything(), ~ replace_na(., &quot;&quot;)))</code></pre>
+<p>At this point, we have generated <code>freq_table_super_sub_cols</code>, which is the finalized frequency table output for the super-sub-ordinate question pairs contained in <code>named_super_sub_r_cols</code>. We now create similar output for <code>rhs_num_cols</code>, which contains the remaining questions with numerical responses. The code here is analogous to that just documented, so only new elements receive commentary. Most of the differences relate to the fact that though both <code>freq_table_super_sub_cols</code> and <code>rhs_num_cols</code> hold questions with numerical responses, in the former, the original input contains those numerical responses, whereas in the latter, the original input contains the descriptive value labels associated with the numerical reponses, but not the numerical responses themselves.</p>
+<p>In the snippet below, we feed <code>rhs_num_cols</code> into a pipeline of functions, pivoting it to long format, obtaining person counts for each specific response, and renaming the <code>value</code> column to <code>label</code>. At this point, the data object has three columns:<code>item</code> (question text), <code>label</code> (descriptive value label), and <code>n</code> (row-wise person count). As mentioned above, the missing column is <code>value</code> (numerical response). Note that because of the pivot to long format, the values of <code>label</code> are nested within each value of <code>item</code>. In other words, each question in the data object has a separate row for each possible descriptive value label, within that question.</p>
+<p>Earlier, we created <code>item_value_label_map</code>, a lookup table which maps descriptive value labels onto numerical responses. This lookup table was hard-coded to reflect the multiple mapping schemes that exist in the columns of <code>rhs_num_cols</code>. Here, we use <code>right_join()</code> to perform the lookup operation, using <code>by =</code> to align the lookup of <code>value</code> to the cell contents of <code>item</code> and <code>label</code>. As a result, the data object now has the four columns required for the frequency table output: <code>item</code>, <code>label</code>, <code>value</code>, and <code>n</code>.</p>
+<pre class="r"><code>freq_table_rhs_num_cols &lt;- rhs_num_cols %&gt;% 
+  pivot_longer(everything(), names_to = &#39;item&#39;, values_to = &#39;value&#39;) %&gt;% 
+  count(item,value) %&gt;% 
+  rename(label = value) %&gt;% 
+  right_join(item_value_label_map, by = c(&quot;item&quot;, &quot;label&quot;)) %&gt;%</code></pre>
 </div>
 </div>
 <div class="footnotes">

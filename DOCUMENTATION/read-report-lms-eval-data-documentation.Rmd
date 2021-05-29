@@ -333,56 +333,6 @@ output <- bind_cols(
 write_csv(output,
           here("OUTPUT-FILES/lms-output-survey-ados2-workshop-2021-04-16.csv"),
           na = "")
-
-school_psych <- output %>% 
-  filter(`What is your field of work?` == "School Psychology") %>% 
-  select(all_of(names(named_super_sub_r_cols))) %>% 
-  pivot_longer(everything(), names_to = 'item', values_to = 'value') %>% 
-  count(item, value) %>% 
-  group_by(item) %>% 
-  complete(value = 1:5) %>% 
-  arrange(desc(value), .by_group = TRUE) %>% 
-  replace_na(list(n = 0)) %>% 
-  mutate(total = sum(n),
-         total_pct = round(100*(n/total), 1),
-         valid_pct = round(100*(n/total), 1),
-         csum = cumsum(n),
-         valid_cum_pct = round(100*(csum/total), 1),
-  ) %>% 
-  separate(
-    item,
-    c("super_q", "sub_q"),
-    ":_",
-    remove = TRUE
-  ) %>% mutate(
-    super_q = case_when(
-      lag(super_q) == super_q  ~ NA_character_,
-      TRUE ~ super_q
-    ),
-    sub_q = case_when(
-      lag(sub_q) == sub_q  ~ NA_character_,
-      TRUE ~ sub_q
-    ),
-    label = case_when(
-      value == 5 ~ "excellent",
-      value == 4 ~ "above average",
-      value == 3 ~ "average",
-      value == 2 ~ "below average",
-      value == 1 ~ "poor",
-      TRUE ~ NA_character_
-    ),
-    across(c(total_pct, valid_pct, valid_cum_pct), ~ format(., digits = 1, nsmall = 1))
-    ) %>%
-  select(super_q, sub_q, value, label, n, total_pct, valid_pct, valid_cum_pct, total) %>% 
-  rename(freq = n) %>% 
-  as.data.frame() %>%
-  mutate(across(everything(), ~ replace_na(., ""))) %>% 
-  write.xlsx(
-    here("OUTPUT-FILES/school-psych-report.xlsx"),
-    sheetName = "school_psych",
-    row.names = FALSE,
-    append = FALSE
-  )
 ```
 <br>
 
@@ -649,19 +599,26 @@ We can apply column-wise formatting to make the frequency table output more read
 ```
 Note that in the `super_q` column, the question text appears only once. In the current data object, that text appears in every cell of the `super_q` column, which clutters the table. The next snippet uses `mutate(case_when())` to recode the `super_q` column to `NA` in every cell except the one where it is needed to concisely label its associated rows. 
 
-As previously, we use a logical test to identify the rows to recode. Here that test is expressed in the predicate `lag(super_q) == super_q`, which returns `TRUE` for all rows where the value of a cell in `super_q` is identical to the value of the immediately preceding cell. The only row where that predicate returns `FALSE` is the first row-wise instance of a particular super-ordinate question. For those first instances, the preceding cell is either a different super-ordinate question, or `NA` (in the first cell at the top of the column). `TRUE ~ super_q` is the "else" condition,  indicates that when the predicate returns `FALSE`, the existing value of `super_q` is retained. 
+As previously, we use a logical test to identify the rows to recode. Here that test is expressed in the predicate `lag(super_q) == super_q`, which returns `TRUE` for rows where the value of a cell in `super_q` is identical to the value of the immediately preceding cell. The only row where that predicate returns `FALSE` is the first instance of a particular super-ordinate question. For those first instances, the preceding cell is either a different super-ordinate question, or `NA` (in the first cell at the top of the column, where there is no preceding cell). `TRUE ~ super_q` is the "else" condition,  indicating (counter-intuitively) that when the predicate returns `FALSE`, the existing value of `super_q` is retained. 
 
-The end result is that the question text is retained in `super_q` only where it first appears, at the top of the set of rows that are associated with that particular super_ordinate question. `super_q` is cleared of values in the remainder of that set of rows, creating a more readable table.
+The end result is that the question text is retained in `super_q` only where it first appears, at the top of the set of rows that are associated with that particular super-ordinate question. The `super_q` column is cleared of values in the remainder of that set of rows, creating a more readable table.
 ```{r freq, echo = 46:50, eval = FALSE}
 ```
-Within `mutate()`, `across()` designates a subset of columns to receive the same formatting or other functional processing. In the next snippet, we format the three `_pct` columns, listing them in a vector that is the first argument to `across()`. The second argument to `across()` is the formatting function, set off with the formula notation `~`.
+Within `mutate()`, `across()` designates a subset of columns to receive the same formatting or other functional processing. In the next snippet, we format the three `_pct` columns, identifying them in a vector that is the first argument to `across()`. The second argument to `across()` is the formatting function, set off with the formula notation `~`.
 
 Here we use `base::format()` to ensure that percentages will display with one digit to the right of the decimal point. The arguments to `format()` are:
 
-* `.`: a stand-in for the columns identified by the first argument to `across()`;
+* `.`: a stand-in for the columns identified by `c(total_pct, valid_pct, valid_cum_pct)`;
 * `nsmall = 1`: minimum number of digits to display to the right of the decimal point.
 ```{r freq, echo = 55:56, eval = FALSE}
 ```
 The remainder of this code block completes the formatting of the frequency table output, including the selection and sequencing of desired columns for output, renaming variables, and using `mutate(across(everything))` to `replace_na()` with blank space `""` in all columns.
 ```{r freq, echo = 57:59, eval = FALSE}
+```
+At this point, we have generated `freq_table_super_sub_cols`, which is the finalized frequency table output for the super-sub-ordinate question pairs contained in `named_super_sub_r_cols`. We now create similar output for `rhs_num_cols`, which contains the remaining questions with numerical responses. The code here is analogous to that just documented, so only new elements receive commentary. Most of the differences relate to the fact that though both `freq_table_super_sub_cols` and `rhs_num_cols` hold questions with numerical responses, in the former, the original input contains those numerical responses, whereas in the latter, the original input contains the descriptive value labels associated with the numerical reponses, but not the numerical responses themselves.
+
+In the snippet below, we feed `rhs_num_cols` into a pipeline of functions, pivoting it to long format, obtaining person counts for each specific response, and renaming the `value` column to `label`. At this point, the data object has three columns:`item` (question text), `label` (descriptive value label), and `n` (row-wise person count). As mentioned above, the missing column is `value` (numerical response). Note that because of the pivot to long format, the values of `label` are nested within each value of `item`. In other words, each question in the data object has a separate row for each possible descriptive value label, within that question.
+
+Earlier, we created `item_value_label_map`, a lookup table which maps descriptive value labels onto numerical responses. This lookup table was hard-coded to reflect the multiple mapping schemes that exist in the columns of `rhs_num_cols`. Here, we use `right_join()` to perform the lookup operation, using `by =` to align the lookup of `value` to the cell contents of `item` and `label`. As a result, the data object now has the four columns required for the frequency table output: `item`, `label`, `value`, and `n`.
+```{r freq, echo = 61:65, eval = FALSE}
 ```

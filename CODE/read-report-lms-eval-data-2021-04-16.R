@@ -298,9 +298,6 @@ freq_table_super_sub_cols <- output %>%
   rename(freq = n) %>% 
   mutate(across(everything(), ~ replace_na(., "")))
 
-
-# CREATE FREQ TABLE FOR rhs_num_cols
-
 freq_table_rhs_num_cols <- rhs_num_cols %>% 
   pivot_longer(everything(), names_to = 'item', values_to = 'value') %>% 
   count(item,value) %>% 
