@@ -907,6 +907,21 @@ write_xlsx(
   count(item,value) %&gt;% 
   rename(label = value) %&gt;% 
   right_join(item_value_label_map, by = c(&quot;item&quot;, &quot;label&quot;)) %&gt;%</code></pre>
+<p>As in the previous code chunk, we call <code>mutate(across())</code> to apply formatting to the <code>_pct</code> columns. Here, however, we have to invoke <code>ungroup()</code> to remove the grouping applied earlier in the pipeline, because grouping can interfere with the function of <code>across()</code>. We did not need to call <code>ungroup()</code> in the previous code chunk, because grouping apparently was removed in that pipeline by <code>separate()</code>.</p>
+<pre class="r"><code>  ungroup() %&gt;% 
+  mutate(
+    item = case_when(
+      lag(item) == item  ~ NA_character_,
+      TRUE ~ item
+    ), 
+    across(c(total_pct, valid_pct, valid_cum_pct), ~ format(., nsmall = 1)) 
+  ) %&gt;%</code></pre>
+<p>Because we intend to join <code>freq_table_rhs_num_cols</code> and <code>freq_table_super_sub_cols</code> into a single frequency table, we must ensure that these two objects have identical column structure and formatting. The next call of <code>mutate()</code> modifies <code>freq_table_rhs_num_cols</code> to meet this requirement, adding an empty <code>sub_q</code> column, and using <code>across(c(value, freq, total), ~ as.character(.))</code> to coerce a certain subset of columns to character. We use <code>relocate()</code> to put the columns into the desired sequence.</p>
+<pre class="r"><code>  mutate(across(super_q, ~ replace_na(., &quot;&quot;)),
+         sub_q = NA_character_,
+         across(c(value, freq, total), ~ as.character(.))
+  ) %&gt;% 
+  relocate(sub_q, .after = &quot;super_q&quot;)</code></pre>
 </div>
 </div>
 <div class="footnotes">

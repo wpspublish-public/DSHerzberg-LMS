@@ -306,11 +306,6 @@ freq_table_rhs_num_cols <- rhs_num_cols %>%
   relocate(value, .after = item) %>% 
   group_by(item) %>% 
   arrange(desc(value), .by_group = TRUE) %>% 
-  # next line will disappear for future versions of this template. It exists
-  # here only to get rid of garbage rows that account for cells where more than
-  # one response was entered. The LMS output no longer permits multiple
-  # responses to a single question.
-  # filter(!is.na(value)) %>% 
   replace_na(list(n = 0)) %>% 
   mutate(total = sum(n),
          total_pct = round(100*(n/total), 1),
@@ -318,7 +313,6 @@ freq_table_rhs_num_cols <- rhs_num_cols %>%
          csum = cumsum(n),
          valid_cum_pct = round(100*(csum/total), 1),
   ) %>% 
-  # need to ungroup() before calling mutate(across()), grouped input messes with across()
   ungroup() %>% 
   mutate(
     item = case_when(
@@ -326,7 +320,6 @@ freq_table_rhs_num_cols <- rhs_num_cols %>%
       TRUE ~ item
     ), 
     across(c(total_pct, valid_pct, valid_cum_pct), ~ format(., nsmall = 1)) 
-    # format ensures pct will print with 1 digit right of decimal
   ) %>%
   select(item, value, label, n, total_pct, valid_pct, valid_cum_pct, total) %>% 
   rename(super_q = item, freq = n) %>% 
