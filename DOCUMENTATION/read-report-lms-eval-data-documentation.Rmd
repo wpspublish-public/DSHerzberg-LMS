@@ -9,7 +9,10 @@ knitr::opts_chunk$set(echo = TRUE, warning = FALSE, message = FALSE)
 
 #### Overview
 
-This is a method for reading output from WPS LMS system, cleaning up and reformatting the data, and producing a report of frequency counts for the course evaluations.
+This is a method for reading output from WPS LMS system, cleaning up and reformatting the data, and producing a summary report of the course evaluation data. The final report is a .xlsx workbook with two sheets:
+
+* `text responses`: Identifying information on the course participants, plus each participant's responses to the open-ended text response questions;
+* `freq tables`: Frequency tables with response counts and other summary measures for questions with numerically coded, fixed-choice responses.
 
 A key element of cleanup is handling columns that contain super-ordinate questions, sub-ordinate questions, and responses. Here is an example of one such column:
 
@@ -622,9 +625,19 @@ In the snippet below, we feed `rhs_num_cols` into a pipeline of functions, pivot
 Earlier, we created `item_value_label_map`, a lookup table which maps descriptive value labels onto numerical responses. This lookup table was hard-coded to reflect the multiple mapping schemes that exist in the columns of `rhs_num_cols`. Here, we use `right_join()` to perform the lookup operation, using `by =` to align the lookup of `value` to the cell contents of `item` and `label`. As a result, the data object now has the four columns required for the frequency table output: `item`, `label`, `value`, and `n`.
 ```{r freq, echo = 61:65, eval = FALSE}
 ```
-As in the previous code chunk, we call `mutate(across())` to apply formatting to the `_pct` columns. Here, however, we have to invoke `ungroup()` to remove the grouping applied earlier in the pipeline, because grouping can interfere with the function of `across()`. We did not need to call `ungroup()` in the previous code chunk, because grouping apparently was removed in that pipeline by `separate()`.
+As in the previous code chunk, we call `mutate(across())` to apply formatting to the `_pct` columns. Here, however, we have to invoke `ungroup()` to remove the grouping applied earlier in the pipeline, because `across()` often throws an error when it encounters grouped data. We did not need to call `ungroup()` in the previous code chunk, because grouping (apparently) was removed in that pipeline by `separate()`.
 ```{r freq, echo = 76:83, eval = FALSE}
 ```
-Because we intend to join `freq_table_rhs_num_cols` and `freq_table_super_sub_cols` into a single frequency table, we must ensure that these two objects have identical column structure and formatting. The next call of `mutate()` modifies `freq_table_rhs_num_cols` to meet this requirement, adding an empty `sub_q` column, and using `across(c(value, freq, total), ~ as.character(.))` to coerce a certain subset of columns to character. We use `relocate()` to put the columns into the desired sequence.
+Because we intend to join `freq_table_rhs_num_cols` and `freq_table_super_sub_cols` into a single frequency table, we must ensure that these two objects have identical column structure and formatting. The next call of `mutate()` modifies `freq_table_rhs_num_cols` to meet this requirement, adding an empty `sub_q` column, and using `across(c(value, freq, total), ~ as.character(.))` to coerce a subset of columns to character. `relocate()` puts the columns into the desired sequence.
 ```{r freq, echo = 86:90, eval = FALSE}
+```
+As noted at the outset, the final summary report on the course evaluation data is a .xlsx workbook with two sheets: one holding open-ended text responses by participant, and one providing frequency tables for questions with fixed-choice, numerically coded responses. 
+
+The columns and rows needed for the summary table are the product of the code up to this point. We now use `bind_rows()` and `bind_cols` to create two new data frames: 
+
+* `freq_table_all`: the contents of the frequency-table sheet on the final report;
+* `text_cols_all`: the contents of the text-response sheet on the final report.
+
+We use `write_xlsx()` to write these two data frames to separate sheets of a single workbook. The first argument to this function is `list(text responses = text_cols_all, freq tables = freq_table_all)`^[When writing code that includes a text label with blank spaces (e.g, `text responses`, enclose the label in back ticks instead of double-quotes.] `write_xlsx` creates a separate sheet in the output .xlsx for each element of `list()`. The elements of `list()` are expressions that pair a sheet name  (e.g., `text responses`) with a data frame that provides content for that sheet (e.g., `text_cols_all`). The second argument to `write_xlsx()` is the destination file path for the output .xlsx.
+```{r freq, echo = 92:106, eval = FALSE}
 ```

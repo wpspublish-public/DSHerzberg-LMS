@@ -170,7 +170,11 @@ pre code {
 
 <div id="overview" class="section level4">
 <h4>Overview</h4>
-<p>This is a method for reading output from WPS LMS system, cleaning up and reformatting the data, and producing a report of frequency counts for the course evaluations.</p>
+<p>This is a method for reading output from WPS LMS system, cleaning up and reformatting the data, and producing a summary report of the course evaluation data. The final report is a .xlsx workbook with two sheets:</p>
+<ul>
+<li><code>text responses</code>: Identifying information on the course participants, plus each participant’s responses to the open-ended text response questions;</li>
+<li><code>freq tables</code>: Frequency tables with response counts and other summary measures for questions with numerically coded, fixed-choice responses.</li>
+</ul>
 <p>A key element of cleanup is handling columns that contain super-ordinate questions, sub-ordinate questions, and responses. Here is an example of one such column:</p>
 <pre><code>`Access/Setting/Overall Experience`                               
 
@@ -907,7 +911,7 @@ write_xlsx(
   count(item,value) %&gt;% 
   rename(label = value) %&gt;% 
   right_join(item_value_label_map, by = c(&quot;item&quot;, &quot;label&quot;)) %&gt;%</code></pre>
-<p>As in the previous code chunk, we call <code>mutate(across())</code> to apply formatting to the <code>_pct</code> columns. Here, however, we have to invoke <code>ungroup()</code> to remove the grouping applied earlier in the pipeline, because grouping can interfere with the function of <code>across()</code>. We did not need to call <code>ungroup()</code> in the previous code chunk, because grouping apparently was removed in that pipeline by <code>separate()</code>.</p>
+<p>As in the previous code chunk, we call <code>mutate(across())</code> to apply formatting to the <code>_pct</code> columns. Here, however, we have to invoke <code>ungroup()</code> to remove the grouping applied earlier in the pipeline, because <code>across()</code> often throws an error when it encounters grouped data. We did not need to call <code>ungroup()</code> in the previous code chunk, because grouping (apparently) was removed in that pipeline by <code>separate()</code>.</p>
 <pre class="r"><code>  ungroup() %&gt;% 
   mutate(
     item = case_when(
@@ -916,18 +920,41 @@ write_xlsx(
     ), 
     across(c(total_pct, valid_pct, valid_cum_pct), ~ format(., nsmall = 1)) 
   ) %&gt;%</code></pre>
-<p>Because we intend to join <code>freq_table_rhs_num_cols</code> and <code>freq_table_super_sub_cols</code> into a single frequency table, we must ensure that these two objects have identical column structure and formatting. The next call of <code>mutate()</code> modifies <code>freq_table_rhs_num_cols</code> to meet this requirement, adding an empty <code>sub_q</code> column, and using <code>across(c(value, freq, total), ~ as.character(.))</code> to coerce a certain subset of columns to character. We use <code>relocate()</code> to put the columns into the desired sequence.</p>
+<p>Because we intend to join <code>freq_table_rhs_num_cols</code> and <code>freq_table_super_sub_cols</code> into a single frequency table, we must ensure that these two objects have identical column structure and formatting. The next call of <code>mutate()</code> modifies <code>freq_table_rhs_num_cols</code> to meet this requirement, adding an empty <code>sub_q</code> column, and using <code>across(c(value, freq, total), ~ as.character(.))</code> to coerce a subset of columns to character. <code>relocate()</code> puts the columns into the desired sequence.</p>
 <pre class="r"><code>  mutate(across(super_q, ~ replace_na(., &quot;&quot;)),
          sub_q = NA_character_,
          across(c(value, freq, total), ~ as.character(.))
   ) %&gt;% 
   relocate(sub_q, .after = &quot;super_q&quot;)</code></pre>
+<p>As noted at the outset, the final summary report on the course evaluation data is a .xlsx workbook with two sheets: one holding open-ended text responses by participant, and one providing frequency tables for questions with fixed-choice, numerically coded responses.</p>
+<p>The columns and rows needed for the summary table are the product of the code up to this point. We now use <code>bind_rows()</code> and <code>bind_cols</code> to create two new data frames:</p>
+<ul>
+<li><code>freq_table_all</code>: the contents of the frequency-table sheet on the final report;</li>
+<li><code>text_cols_all</code>: the contents of the text-response sheet on the final report.</li>
+</ul>
+<p>We use <code>write_xlsx()</code> to write these two data frames to separate sheets of a single workbook. The first argument to this function is <code>list(text responses = text_cols_all, freq tables = freq_table_all)</code><a href="#fn2" class="footnote-ref" id="fnref2"><sup>2</sup></a> <code>write_xlsx</code> creates a separate sheet in the output .xlsx for each element of <code>list()</code>. The elements of <code>list()</code> are expressions that pair a sheet name (e.g., <code>text responses</code>) with a data frame that provides content for that sheet (e.g., <code>text_cols_all</code>). The second argument to <code>write_xlsx()</code> is the destination file path for the output .xlsx.</p>
+<pre class="r"><code>freq_table_all &lt;- bind_rows(
+  freq_table_super_sub_cols,
+  freq_table_rhs_num_cols
+)
+
+text_cols_all &lt;- bind_cols(
+  lhs_cols,
+  date_col,
+  rhs_text_cols
+)
+
+write_xlsx(
+  list(`text responses` = text_cols_all, `freq tables` = freq_table_all),
+  here(&quot;OUTPUT-FILES/lms-report-survey-ados2-workshop-2021-04-16.xlsx&quot;)
+)</code></pre>
 </div>
 </div>
 <div class="footnotes">
 <hr />
 <ol>
 <li id="fn1"><p><code>token_split_regex</code> was defined in detail earlier in this document<a href="#fnref1" class="footnote-back">↩︎</a></p></li>
+<li id="fn2"><p>When writing code that includes a text label with blank spaces (e.g, <code>text responses</code>, enclose the label in back ticks instead of double-quotes.<a href="#fnref2" class="footnote-back">↩︎</a></p></li>
 </ol>
 </div>
 

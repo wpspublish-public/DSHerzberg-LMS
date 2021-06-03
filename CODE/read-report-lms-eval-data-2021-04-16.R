@@ -329,8 +329,6 @@ freq_table_rhs_num_cols <- rhs_num_cols %>%
   ) %>% 
   relocate(sub_q, .after = "super_q")
 
-# COMBINED FREQ TABLE, TEXT COLS IN SINGLE REPORT
-
 freq_table_all <- bind_rows(
   freq_table_super_sub_cols,
   freq_table_rhs_num_cols
